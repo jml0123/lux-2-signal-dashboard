@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/*
+ * `data-theme` on <html>: "light" | "dark" (set by ThemeToggle + inline script).
+ * Brand + chart tokens stay the same in both themes (lux greens unchanged).
+ * App chrome (page, cards, text, inputs) uses --app-* per theme.
+ */
+html {
+  /* Brand library — keep in sync with `dashboardTheme.brandPalette` */
+  --brand-deep-forest: #094630;
+  --brand-sea-green: #058b64;
+  --brand-pine-teal: #283f2e;
+  --brand-seaweed: #37ac83;
+  --brand-turf-green: #2a7155;
+
+  --palette-hunter-green: #2f5d40;
+  --palette-celadon: #94c597;
+  --palette-sea-green: #62996d;
+  --palette-deep-teal: #497359;
+  --palette-evergreen: #072414;
+
+  /* Shared chart chrome (tooltip); axis/ticks/grid/lines are theme-specific below. */
+  --chart-tooltip-bg: rgba(7, 36, 20, 0.92);
+  --chart-tooltip-fg: #f4faf4;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --app-page-bg: #ededed;
+  --app-page-bg-accent: #e4e4e4;
+  --app-card-surface: #ffffff;
+  --app-card-border: rgba(7, 36, 20, 0.12);
+  --app-text: #072414;
+  --app-text-muted: #2f5d40;
+  --app-text-subtle: #497359;
+  --chart-plot-bg: var(--app-page-bg);
+  --chart-grid: rgba(47, 93, 64, 0.14);
+  --chart-sun-line: color-mix(in srgb, var(--brand-pine-teal) 42%, transparent);
+  --chart-axis: var(--brand-pine-teal);
+  --chart-tick: var(--brand-deep-forest);
+  --chart-line: var(--brand-pine-teal);
+  --chart-brush-pattern-stroke: var(--brand-pine-teal);
+  --chart-brush-selection-stroke: var(--brand-pine-teal);
+  --chart-area: rgba(47, 93, 64, 0.22);
+  --chart-area-overview: rgba(47, 93, 64, 0.2);
+  --app-brush-holder-fill: var(--app-page-bg);
+  --app-brush-holder-border: transparent;
+  --app-field-surface: #ffffff;
+  --background: var(--app-page-bg);
+  --foreground: var(--app-text);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --app-page-bg: #333833;
+  --app-page-bg-accent: #3d4440;
+  --app-card-surface: #3a403c;
+  --app-card-border: rgba(232, 235, 232, 0.14);
+  --app-text: #e8ebe8;
+  --app-text-muted: #b8c9be;
+  --app-text-subtle: #8fa896;
+  --chart-plot-bg: var(--app-page-bg);
+  --chart-grid: rgba(232, 235, 232, 0.14);
+  --chart-sun-line: color-mix(in srgb, var(--brand-seaweed) 50%, transparent);
+  --chart-axis: var(--brand-seaweed);
+  --chart-tick: var(--app-text);
+  --chart-line: var(--brand-seaweed);
+  --chart-brush-pattern-stroke: var(--brand-seaweed);
+  --chart-brush-selection-stroke: var(--brand-sea-green);
+  --chart-area: rgba(55, 172, 131, 0.2);
+  --chart-area-overview: rgba(55, 172, 131, 0.18);
+  --app-brush-holder-fill: var(--app-page-bg);
+  --app-brush-holder-border: transparent;
+  --app-field-surface: #343a36;
+  --background: var(--app-page-bg);
+  --foreground: var(--app-text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
