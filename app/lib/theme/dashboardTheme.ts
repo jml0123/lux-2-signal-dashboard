@@ -18,7 +18,7 @@ export const dashboardTheme = {
 
   /** Axis + lux series line strokes (`--chart-axis`, `--chart-line`). */
   chartStroke: brandPalette.pineTeal,
-  /** Sun-event glyph outlines on `LuxReadingsChart`. */
+  /** Sun-event glyph outlines on `LuxReadingsSingleChart`. */
   chartGlyphStroke: brandPalette.turfGreen,
 
   hunterGreen: "#2F5D40",

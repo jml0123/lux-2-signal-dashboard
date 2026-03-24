@@ -1,5 +1,5 @@
 import { getSunTimes } from "sunrise-sunset-js";
-import { getUtcDayBounds } from "./dayBounds";
+import { getUtcDayBounds } from "./dateUtils";
 
 /**
  * Padding outside civil twilight: 30m before civil dawn, 30m after civil dusk.

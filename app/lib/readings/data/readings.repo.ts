@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getUtcDayBounds } from "../dayBounds";
+import { getUtcDayBounds } from "../dateUtils";
 import type {
   ReadingBucketedRow,
   ReadingDbDto,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LuxReadingsChart } from "@/app/components/charts/LuxReadingsChart";
+import { LuxReadingsSingleChart } from "@/app/components/charts/lux-readings/LuxReadingsSingleChart";
 import { ReadingsQueryControls } from "@/app/components/readings/ReadingsQueryControls";
 import type { ReadingsQueryControlsHandle } from "@/app/components/readings/ReadingsQueryControls";
 import {
@@ -14,8 +14,8 @@ import {
   writeReadingsToCache,
 } from "@/app/lib/readings/cache/readingsCache";
 import { ReadingsScopeSelector } from "@/app/components/readings/ReadingsScopeSelector";
-import { ThemeToggle } from "@/app/components/theme/ThemeToggle";
-import { formatChartDayTitleParts } from "@/app/lib/readings/formatChartDayTitle";
+import { ReadingsSensorSelect } from "@/app/components/readings/ReadingsSensorSelect";
+import { formatChartDayTitleParts } from "@/app/lib/readings/dateUtils";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type {
   LuxChartPoint,
@@ -122,23 +122,7 @@ export function ReadingsDashboard({
   }, [date, sensor, queryStartIso, queryEndIso]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-        <h1
-          className="font-display text-xl font-bold tracking-[-0.02em] sm:text-2xl"
-          style={{ color: "var(--chart-title-date)" }}
-        >
-          Light Readings
-        </h1>
-        <p
-          className="mt-1 text-sm"
-          style={{ color: "var(--app-text-subtle)" }}
-        >
-        </p>
-        </div>
-        <ThemeToggle />
-      </header>
+    <>
       <div className="flex justify-center">
         <ReadingsScopeSelector />
       </div>
@@ -161,8 +145,13 @@ export function ReadingsDashboard({
           One bucket loaded; at least two are needed to draw the series.
         </p>
       ) : null}
-      <div className="px-4 pt-4 pb-0">
-        <LuxReadingsChart
+      <div className="flex flex-col gap-2 px-1 pt-4 pb-0 sm:px-2">
+        <ReadingsSensorSelect
+          defaultDate={date}
+          defaultSensor={sensor}
+          className="self-start"
+        />
+        <LuxReadingsSingleChart
           key={`${chartStartIso}|${chartEndIso}|${date}|${sensor}`}
           chartDayTitle={null}
           observerLocationLabel={null}
@@ -173,7 +162,7 @@ export function ReadingsDashboard({
           sunMarkers={sunMarkers}
         />
       </div>
-      <div className="-mt-6 flex justify-end px-4">
+      <div className="-mt-6 flex justify-end px-1 sm:px-2">
         <div className="flex flex-col items-end gap-2">
           {chartDayTitle ? (
             <div className="font-display text-right text-sm leading-tight">
@@ -184,11 +173,27 @@ export function ReadingsDashboard({
                 <button
                   type="button"
                   onClick={() => queryControlsRef.current?.openDatePicker()}
-                  className="cursor-pointer underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
+                  className="group inline-flex cursor-pointer items-center gap-0.5 underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
                   style={{ color: "var(--chart-title-date)" }}
                   aria-label="Open date picker"
                 >
                   {chartDayTitle.dateLine}
+                  <svg
+                    className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70"
+                    width="11"
+                    height="11"
+                    viewBox="0 0 12 12"
+                    aria-hidden
+                  >
+                    <path
+                      d="M2.5 4.25L6 7.75L9.5 4.25"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </button>
               </span>
               {chartDayTitle.weekdayLine ? (
@@ -224,6 +229,6 @@ export function ReadingsDashboard({
           />
         </div>
       </div>
-    </div>
+    </>
   );
 }

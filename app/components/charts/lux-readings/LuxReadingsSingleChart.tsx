@@ -1,32 +1,43 @@
 "use client";
 
-import { Brush } from "@visx/brush";
-import type BaseBrush from "@visx/brush/lib/BaseBrush";
-import type { BrushHandleRenderProps } from "@visx/brush/lib/BrushHandle";
-import type { Bounds } from "@visx/brush/lib/types";
-import { curveCatmullRom } from "@visx/curve";
+import { curveNatural } from "@visx/curve";
 import { localPoint } from "@visx/event";
-import {
-  GlyphCircle,
-  GlyphDiamond,
-  GlyphSquare,
-  GlyphStar,
-} from "@visx/glyph";
 import { Group } from "@visx/group";
 import { PatternLines } from "@visx/pattern";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear, scaleUtc } from "@visx/scale";
 import { Area, AreaClosed, LinePath } from "@visx/shape";
+import type BaseBrush from "@visx/brush/lib/BaseBrush";
+import type { Bounds } from "@visx/brush/lib/types";
 import { defaultStyles, Tooltip, useTooltip } from "@visx/tooltip";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
+import type {
+  ChartTooltipData,
+  CurveSpotlights,
+  LuxReadingsSingleChartInnerProps,
+  LuxReadingsSingleChartProps,
+  SunMarkerLayout,
+} from "@/app/components/charts/charts.types";
+import {
+  formatTimeLabel,
+  formatXTick,
+  nearestDualPoint,
+  nearestLuxPoint,
+} from "@/app/lib/readings/chartPointerUtils";
 import { luxAreaGradientStopSpecs } from "@/app/lib/readings/readings.constants";
-import type { ChartDayTitleParts } from "@/app/lib/readings/formatChartDayTitle";
-import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type { LuxChartPoint, LuxDualPoint } from "@/app/lib/readings/readings.types";
 import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
+import { LuxReadingsChartTooltipContent } from "./LuxReadingsChartTooltip";
+import { LuxReadingsBrushStrip } from "./LuxReadingsBrushStrip";
+import {
+  LuxSunGlyphsInteractive,
+  SUN_MARKER_META,
+} from "./LuxReadingsGlyphs";
+
+// --- Lux chart layout (tweak here) -----------------------------------------
 
 const defaultYDomain: [number, number] = [0, 4095];
-const margin = { top: 12, right: 16, bottom: 44, left: 12 };
+const margin = { top: 12, right: 8, bottom: 44, left: 8 };
 /** Follows pointer on the plot (spotlight). */
 const CURSOR_MARKER_EMOJI = "\u{1F526}";
 /** Space between the main chart and the brush holder (visx-style separation). */
@@ -34,198 +45,25 @@ const chartSeparation = 36;
 /** Inset inside the rounded brush “holder” card. */
 const brushHolderPadding = { top: 14, bottom: 16, left: 16, right: 16 };
 const overviewInnerHeight = 52;
-/** Very smooth editorial curve feel. */
-const luxLineCurve = curveCatmullRom.alpha(0.9);
-/** SVG text does not always inherit `body`; keep aligned with global `font-sans` (Noto Sans). */
+/** Main plot total height (includes `margin` top/bottom). */
+const plotHeight = 380;
+/** Natural cubic spline — passes through points with long, smooth arcs between buckets. */
+const luxLineCurve = curveNatural;
+/** Area fill: low opacity so the gradient fades into `--chart-plot-bg`. */
+const luxAreaFillOpacity = 0.12;
+const luxBrushAreaFillOpacity = 0.19;
+/** SVG text: align with global `font-sans` (Noto Sans). */
 const chartSansFontFamily =
   "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
 const chartEmojiMarkerFontFamily =
   'var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", ui-sans-serif, sans-serif';
-/** @visx/glyph symbol size (see [visx glyphs](https://visx.airbnb.tech/glyphs)). */
-const SUN_GLYPH_SIZE = 44;
-const SUN_GLYPH_TOP = 14;
-/** Invisible hit target radius (px) around each sun glyph for tooltips. */
-const SUN_GLYPH_HIT_R = 22;
+/** Sun glyph vertical position in main plot inner coordinates. */
+const LUX_SUN_GLYPH_TOP = 14;
+const LUX_SUN_GLYPH_HIT_R = 22;
 
-type SunMarkerKind = keyof ChartSunMarkersIso;
+// ---------------------------------------------------------------------------
 
-function SunGlyphShape({
-  kind,
-  left,
-  top,
-  size = SUN_GLYPH_SIZE,
-}: {
-  kind: SunMarkerKind;
-  left: number;
-  top: number;
-  size?: number;
-}) {
-  const stroke = dashboardTheme.chartGlyphStroke;
-  const strokeWidth = 1;
-  switch (kind) {
-    case "civilDawn":
-      return (
-        <GlyphSquare
-          left={left}
-          top={top}
-          size={size}
-          fill={dashboardTheme.chartSunCivilDawn}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      );
-    case "sunrise":
-      return (
-        <GlyphStar
-          left={left}
-          top={top}
-          size={size}
-          fill={dashboardTheme.chartSunSunrise}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      );
-    case "solarNoon":
-      return (
-        <GlyphDiamond
-          left={left}
-          top={top}
-          size={size}
-          fill={dashboardTheme.chartSunSolarNoon}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      );
-    case "sunset":
-      return (
-        <GlyphCircle
-          left={left}
-          top={top}
-          size={size}
-          fill={dashboardTheme.chartSunSunset}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      );
-    case "civilDusk":
-      return (
-        <GlyphSquare
-          left={left}
-          top={top}
-          size={size}
-          fill={dashboardTheme.chartSunCivilDusk}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      );
-    default:
-      return null;
-  }
-}
-
-const SUN_MARKER_META: { kind: SunMarkerKind; label: string }[] = [
-  { kind: "civilDawn", label: "Civil dawn" },
-  { kind: "sunrise", label: "Sunrise" },
-  { kind: "solarNoon", label: "Solar noon" },
-  { kind: "sunset", label: "Sunset" },
-  { kind: "civilDusk", label: "Civil dusk" },
-];
-
-function formatXTick(v: Date | number) {
-  const d = v instanceof Date ? v : new Date(v);
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(d);
-}
-
-function formatTimeLabel(iso: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
-function nearestLuxPoint(points: LuxChartPoint[], tMs: number): LuxChartPoint | null {
-  if (points.length === 0) return null;
-  let best = points[0];
-  let bestD = Infinity;
-  for (const p of points) {
-    const d = Math.abs(new Date(p.time).getTime() - tMs);
-    if (d < bestD) {
-      bestD = d;
-      best = p;
-    }
-  }
-  return best;
-}
-
-/** Left/right resize handles for `@visx/brush` (see Visx brush example `renderBrushHandle`). */
-function BrushResizeHandle({ x, height, isBrushActive }: BrushHandleRenderProps) {
-  const pathW = 8;
-  const pathH = 16;
-  if (!isBrushActive) return null;
-  return (
-    <Group left={x + pathW / 2} top={(height - pathH) / 2}>
-      <path
-        fill="var(--app-field-surface)"
-        d="M -4.5 0.5 L 3.5 0.5 L 3.5 15.5 L -4.5 15.5 L -4.5 0.5 M -1.5 4 L -1.5 12 M 0.5 4 L 0.5 12"
-        stroke={dashboardTheme.chartGlyphStroke}
-        strokeWidth={1}
-        style={{ cursor: "ew-resize" }}
-      />
-    </Group>
-  );
-}
-
-function nearestDualPoint(points: LuxDualPoint[], tMs: number): LuxDualPoint | null {
-  if (points.length === 0) return null;
-  let best = points[0];
-  let bestD = Infinity;
-  for (const p of points) {
-    const d = Math.abs(new Date(p.time).getTime() - tMs);
-    if (d < bestD) {
-      bestD = d;
-      best = p;
-    }
-  }
-  return best;
-}
-
-type TooltipSingle = { kind: "single"; point: LuxChartPoint };
-type TooltipDual = { kind: "dual"; point: LuxDualPoint };
-type TooltipSun = {
-  kind: "sun";
-  label: string;
-  timeLabel: string;
-};
-
-type ChartTooltipData = TooltipSingle | TooltipDual | TooltipSun;
-
-/** Spotlight sits on the line(s) at the nearest time bucket, not at raw pointer coords. */
-type CurveSpotlights =
-  | null
-  | { mode: "single"; x: number; y: number }
-  | { mode: "dual"; x: number; yA: number; yB: number };
-
-type LuxReadingsChartInnerProps = {
-  width: number;
-  dayStart: Date;
-  dayEnd: Date;
-  points: LuxChartPoint[];
-  dual?: { sensorA: string; sensorB: string; points: LuxDualPoint[] };
-  yDomain?: [number, number];
-  sunMarkers?: ChartSunMarkersIso | null;
-};
-
-type SunMarkerLayout = {
-  kind: SunMarkerKind;
-  label: string;
-  t: Date;
-  x: number;
-};
-
-function LuxReadingsChartInner({
+function LuxReadingsSingleChartInner({
   width,
   dayStart,
   dayEnd,
@@ -233,8 +71,7 @@ function LuxReadingsChartInner({
   dual,
   yDomain = defaultYDomain,
   sunMarkers = null,
-}: LuxReadingsChartInnerProps) {
-  const plotHeight = 300;
+}: LuxReadingsSingleChartInnerProps) {
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = plotHeight - margin.top - margin.bottom;
   const brushInnerWidth = Math.max(
@@ -371,8 +208,8 @@ function LuxReadingsChartInner({
     const dawn = sunMarkers?.civilDawn ? new Date(sunMarkers.civilDawn) : dayStart;
     const dusk = sunMarkers?.civilDusk ? new Date(sunMarkers.civilDusk) : dayEnd;
     return {
-      left: `Dawn ${formatXTick(dawn)}`,
-      right: `Dusk ${formatXTick(dusk)}`,
+      left: `₊☀︎✧ Dawn ${formatXTick(dawn)}`,
+      right: `⋆☼. Dusk ${formatXTick(dusk)}`,
     };
   }, [isZoomed, zoomDomain, sunMarkers, dayStart, dayEnd]);
 
@@ -390,7 +227,7 @@ function LuxReadingsChartInner({
     [dayStart, dayEnd],
   );
 
-  const resetZoom = useCallback(() => {
+  const onBrushResetClick = useCallback(() => {
     setZoomDomain([dayStart, dayEnd]);
     brushRef.current?.reset();
   }, [dayStart, dayEnd]);
@@ -454,12 +291,51 @@ function LuxReadingsChartInner({
     hideTooltip();
   }, [hideTooltip]);
 
+  const onSunPointerEnter = useCallback(
+    (payload: {
+      label: string;
+      timeLabel: string;
+      anchorX: number;
+    }) => {
+      showTooltip({
+        tooltipLeft: margin.left + payload.anchorX,
+        tooltipTop: margin.top + LUX_SUN_GLYPH_TOP,
+        tooltipData: {
+          kind: "sun",
+          label: payload.label,
+          timeLabel: payload.timeLabel,
+        },
+      });
+    },
+    [showTooltip],
+  );
+
+  const brushSunLineDecorations = useMemo(
+    () =>
+      brushSunLayout.map(({ kind, label, t, x }) => (
+        <g key={kind} style={{ pointerEvents: "none" }} aria-hidden="true">
+          <title>{`${label} — ${formatXTick(t)}`}</title>
+          <line
+            x1={x}
+            x2={x}
+            y1={0}
+            y2={overviewInnerHeight}
+            stroke="var(--chart-sun-line)"
+            strokeWidth={1}
+            strokeDasharray="3 2"
+            opacity={0.65}
+          />
+        </g>
+      )),
+    [brushSunLayout],
+  );
+
   return (
     <div ref={containerRef} className="relative">
       {isZoomed ? (
         <button
           type="button"
-          onClick={resetZoom}
+          onClick={onBrushResetClick}
           className="absolute right-0 top-0 z-10 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition-colors"
           style={{
             borderColor: "var(--app-card-border)",
@@ -536,7 +412,7 @@ function LuxReadingsChartInner({
                 y1={(d) => yScale(Math.max(d.luxA, d.luxB))}
                 curve={luxLineCurve}
                 fill={`url(#${luxAreaGradientId})`}
-                fillOpacity={0.92}
+                fillOpacity={luxAreaFillOpacity}
               />
               <LinePath<LuxDualPoint>
                 data={dual!.points}
@@ -569,6 +445,7 @@ function LuxReadingsChartInner({
                 yScale={yScale}
                 curve={luxLineCurve}
                 fill={`url(#${luxAreaGradientId})`}
+                fillOpacity={luxAreaFillOpacity}
               />
               <LinePath<LuxChartPoint>
                 data={points}
@@ -593,31 +470,14 @@ function LuxReadingsChartInner({
             onPointerLeave={onPlotPointerLeave}
           />
 
-          {mainSunLayout.map(({ kind, label, t, x }) => (
-            <g key={`${kind}-glyph`} style={{ pointerEvents: "auto" }}>
-              <SunGlyphShape kind={kind} left={x} top={SUN_GLYPH_TOP} />
-              <circle
-                cx={x}
-                cy={SUN_GLYPH_TOP}
-                r={SUN_GLYPH_HIT_R}
-                fill="transparent"
-                style={{ cursor: "default" }}
-                aria-label={`${label}, ${formatXTick(t)}`}
-                onPointerEnter={() => {
-                  showTooltip({
-                    tooltipLeft: margin.left + x,
-                    tooltipTop: margin.top + SUN_GLYPH_TOP,
-                    tooltipData: {
-                      kind: "sun",
-                      label,
-                      timeLabel: formatXTick(t),
-                    },
-                  });
-                }}
-                onPointerLeave={hideTooltip}
-              />
-            </g>
-          ))}
+          <LuxSunGlyphsInteractive
+            layouts={mainSunLayout}
+            glyphTop={LUX_SUN_GLYPH_TOP}
+            hitRadius={LUX_SUN_GLYPH_HIT_R}
+            formatTime={formatXTick}
+            onSunPointerEnter={onSunPointerEnter}
+            onSunPointerLeave={hideTooltip}
+          />
 
           {curveSpotlights?.mode === "single" ? (
             <text
@@ -686,7 +546,7 @@ function LuxReadingsChartInner({
             style={{
               fill: "var(--chart-tick)",
               fontSize: 11,
-              fontFamily: chartSansFontFamily,
+              fontFamily: chartEmojiMarkerFontFamily,
             }}
           >
             {edgeTimeLabels.left}
@@ -699,84 +559,33 @@ function LuxReadingsChartInner({
             style={{
               fill: "var(--chart-tick)",
               fontSize: 11,
-              fontFamily: chartSansFontFamily,
+              fontFamily: chartEmojiMarkerFontFamily,
             }}
           >
             {edgeTimeLabels.right}
           </text>
         </Group>
 
-        <Group
-          left={margin.left}
-          top={margin.top + innerHeight + chartSeparation}
+        <LuxReadingsBrushStrip
+          outerGroupLeft={margin.left}
+          outerGroupTop={margin.top + innerHeight + chartSeparation}
+          innerWidth={innerWidth}
+          brushStageHeight={brushStageHeight}
+          brushHolderPadding={brushHolderPadding}
+          brushInnerWidth={brushInnerWidth}
+          overviewInnerHeight={overviewInnerHeight}
+          brushPatternId={brushPatternId}
+          overviewPoints={overviewPoints}
+          brushXScale={brushXScale}
+          brushYScale={brushYScale}
+          brushRef={brushRef}
+          onBrushChange={onBrushChange}
+          onBrushResetClick={onBrushResetClick}
+          luxLineCurve={luxLineCurve}
+          luxBrushAreaFillOpacity={luxBrushAreaFillOpacity}
         >
-          <rect
-            x={0}
-            y={0}
-            width={innerWidth}
-            height={brushStageHeight}
-            rx={8}
-            fill="var(--app-brush-holder-fill)"
-            stroke="var(--app-brush-holder-border)"
-            strokeWidth={1}
-          />
-          <Group
-            left={brushHolderPadding.left}
-            top={brushHolderPadding.top}
-          >
-            {brushSunLayout.map(({ kind, label, t, x }) => (
-              <g key={kind} style={{ pointerEvents: "none" }} aria-hidden="true">
-                <title>{`${label} — ${formatXTick(t)}`}</title>
-                <line
-                  x1={x}
-                  x2={x}
-                  y1={0}
-                  y2={overviewInnerHeight}
-                  stroke="var(--chart-sun-line)"
-                  strokeWidth={1}
-                  strokeDasharray="3 2"
-                  opacity={0.65}
-                />
-              </g>
-            ))}
-            {overviewPoints.length >= 2 ? (
-              <AreaClosed<LuxChartPoint>
-                data={overviewPoints}
-                x={(d) => brushXScale(new Date(d.time)) ?? 0}
-                y={(d) => brushYScale(d.lux) ?? 0}
-                yScale={brushYScale}
-                curve={luxLineCurve}
-                fill="var(--palette-celadon)"
-                fillOpacity={0.85}
-                style={{ pointerEvents: "none" }}
-              />
-            ) : null}
-            <Brush
-              innerRef={brushRef}
-              xScale={brushXScale}
-              yScale={brushYScale}
-              width={brushInnerWidth}
-              height={overviewInnerHeight}
-              margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
-              handleSize={8}
-              brushDirection="horizontal"
-              resizeTriggerAreas={["left", "right"]}
-              onChange={onBrushChange}
-              onClick={() => {
-                setZoomDomain([dayStart, dayEnd]);
-                brushRef.current?.reset();
-              }}
-              selectedBoxStyle={{
-                fill: `url(#${brushPatternId})`,
-                stroke: "var(--chart-brush-selection-stroke)",
-                strokeWidth: 1.5,
-              }}
-              renderBrushHandle={(props) => <BrushResizeHandle {...props} />}
-              useWindowMoveEvents
-              disableDraggingSelection={false}
-            />
-          </Group>
-        </Group>
+          {brushSunLineDecorations}
+        </LuxReadingsBrushStrip>
       </svg>
 
       {tooltipOpen && tooltipData && (
@@ -803,58 +612,19 @@ function LuxReadingsChartInner({
           }}
           applyPositionStyle
         >
-          {tooltipData.kind === "single" ? (
-            <div className="flex flex-col gap-0.5">
-              <div>{formatTimeLabel(tooltipData.point.time)}</div>
-              <div className="font-medium tabular-nums">
-                {Math.round(tooltipData.point.lux)} lux
-              </div>
-            </div>
-          ) : tooltipData.kind === "dual" ? (
-            <div className="flex flex-col gap-1">
-              <div>{formatTimeLabel(tooltipData.point.time)}</div>
-              <div className="tabular-nums">
-                <span style={{ color: "var(--palette-celadon)" }}>
-                  {tooltipData.point.sensorA}:
-                </span>{" "}
-                {Math.round(tooltipData.point.luxA)} lux
-              </div>
-              <div className="tabular-nums">
-                <span style={{ color: "var(--palette-sea-green)" }}>
-                  {tooltipData.point.sensorB}:
-                </span>{" "}
-                {Math.round(tooltipData.point.luxB)} lux
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-0.5">
-              <div className="font-semibold">{tooltipData.label}</div>
-              <div className="tabular-nums opacity-90">
-                {tooltipData.timeLabel}
-              </div>
-            </div>
-          )}
+          <LuxReadingsChartTooltipContent
+            data={tooltipData}
+            formatTimeLabel={formatTimeLabel}
+          />
         </Tooltip>
       )}
     </div>
   );
 }
 
-export type LuxReadingsChartProps = {
-  /** Centered chart heading: date row + weekday row (theme colors). */
-  chartDayTitle?: ChartDayTitleParts | null;
-  observerLocationLabel?: string | null;
-  dayStartIso: string;
-  dayEndIso: string;
-  points: LuxChartPoint[];
-  dual?: { sensorA: string; sensorB: string; points: LuxDualPoint[] };
-  /** Civil dawn/dusk + sunrise/sunset at observer coords; omitted when lat/lng unset. */
-  sunMarkers?: ChartSunMarkersIso | null;
-  yDomain?: [number, number];
-  className?: string;
-};
+export type { LuxReadingsSingleChartProps } from "@/app/components/charts/charts.types";
 
-export function LuxReadingsChart({
+export function LuxReadingsSingleChart({
   chartDayTitle,
   observerLocationLabel,
   dayStartIso,
@@ -864,16 +634,16 @@ export function LuxReadingsChart({
   sunMarkers = null,
   yDomain,
   className,
-}: LuxReadingsChartProps) {
+}: LuxReadingsSingleChartProps) {
   const dayStart = useMemo(() => new Date(dayStartIso), [dayStartIso]);
   const dayEnd = useMemo(() => new Date(dayEndIso), [dayEndIso]);
 
   return (
-    <div className={className ?? "w-full min-h-[380px]"}>
+    <div className={className ?? "w-full min-h-[500px]"}>
       <ParentSize debounceTime={10}>
         {({ width }) =>
           width < 8 ? null : (
-            <LuxReadingsChartInner
+            <LuxReadingsSingleChartInner
               width={width}
               dayStart={dayStart}
               dayEnd={dayEnd}

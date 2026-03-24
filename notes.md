@@ -1,2 +1,8 @@
-- Add glyphs for dusk, dawn, sunrise, sunset.
-https://www.npmjs.com/package/sunrise-sunset-js
+- Refactor chart and clean up patterns
+- Better design
+- Multi-day support -> Ridge chart
+- digit font for time
+- curvier lines, no x axis line, only labels for dusk and dawn (edges of the graph), or when zoomed in (edges of window)
+- mark min and max of that day if day is finished
+- stack charts instead of select. Middle chart is the difference chart
+- Glyphs instead of text for scope labels

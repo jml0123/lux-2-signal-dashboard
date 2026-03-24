@@ -10,17 +10,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  readSensorsFromCache,
-  writeSensorsToCache,
-} from "@/app/lib/readings/cache/sensorsCache";
-
-function buildQueryPath(nextDate: string, nextSensor: string) {
-  const params = new URLSearchParams();
-  params.set("date", nextDate);
-  if (nextSensor.trim()) params.set("sensor", nextSensor);
-  return `/?${params.toString()}`;
-}
+import { buildReadingsQueryPath } from "@/app/lib/readings/readingsQueryPath";
 
 export type ReadingsQueryControlsProps = {
   defaultDate: string;
@@ -55,10 +45,6 @@ export const ReadingsQueryControls = forwardRef<
 ) {
   const router = useRouter();
   const [date, setDate] = useState(defaultDate);
-  const [sensor, setSensor] = useState(defaultSensor);
-  /** Empty on first paint so SSR and hydration match; cache/API fill in useEffect. */
-  const [sensors, setSensors] = useState<string[]>([]);
-  const [sensorLoadError, setSensorLoadError] = useState<string | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarValue = useMemo(() => toDateValue(date), [date]);
 
@@ -74,93 +60,25 @@ export const ReadingsQueryControls = forwardRef<
 
   useEffect(() => {
     setDate(defaultDate);
-    setSensor(defaultSensor);
-  }, [defaultDate, defaultSensor]);
-
-  useEffect(() => {
-    const cached = readSensorsFromCache();
-    if (cached?.length) {
-      setSensors(cached);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/sensors");
-        const data = (await res.json()) as { sensors?: string[]; error?: string };
-        if (!res.ok) {
-          throw new Error(data.error ?? res.statusText);
-        }
-        if (cancelled || !data.sensors) return;
-        setSensors(data.sensors);
-        writeSensorsToCache(data.sensors);
-        setSensorLoadError(null);
-      } catch (e) {
-        if (!cancelled) {
-          setSensorLoadError(e instanceof Error ? e.message : "Failed to load sensors");
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [defaultDate]);
 
   const onDateChange = useCallback(
     (nextDate: string) => {
       setDate(nextDate);
-      router.replace(buildQueryPath(nextDate, sensor));
+      router.replace(buildReadingsQueryPath(nextDate, defaultSensor));
       setIsCalendarOpen(false);
     },
-    [router, sensor],
-  );
-
-  const onSensorChange = useCallback(
-    (nextSensor: string) => {
-      setSensor(nextSensor);
-      router.replace(buildQueryPath(date, nextSensor));
-    },
-    [router, date],
+    [router, defaultSensor],
   );
 
   return (
-    <div className="relative flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
-      <label
-        className="flex min-w-[8rem] flex-col gap-1"
-        style={{ color: "var(--app-text-muted)" }}
-      >
-        <span className="sr-only">Sensor</span>
-        <select
-          value={sensor}
-          onChange={(e) => onSensorChange(e.target.value)}
-          aria-label="Sensor"
-          className="rounded-none border px-2 py-1 text-xs"
-          style={{
-            borderColor: "var(--app-card-border)",
-            background: "var(--app-field-surface)",
-            color: "var(--app-text)",
-          }}
-        >
-          <option value="">All sensors</option>
-          {sensors.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        {sensorLoadError ? (
-          <span className="text-xs font-normal text-red-600 dark:text-red-400">
-            {sensorLoadError}
-          </span>
-        ) : null}
-      </label>
+    <div className="relative min-h-px min-w-px self-end">
       {isCalendarOpen ? (
         <div
-          className="lux-date-picker absolute bottom-full right-0 z-40 mb-2 w-auto p-0"
+          className="lux-date-picker absolute bottom-full right-0 z-40 mb-2 w-auto rounded-md border p-3 shadow-sm"
           style={{
-            background: "transparent",
+            background: "var(--app-card-surface)",
+            borderColor: "var(--app-card-border)",
           }}
           aria-label={`Date picker ${observerTimezone ? `(${observerTimezone})` : "(UTC)"}`}
         >

@@ -1,9 +1,10 @@
 import { ReadingsDashboard } from "@/app/components/readings/ReadingsDashboard";
+import { ReadingsDashboardHeader } from "@/app/components/readings/ReadingsDashboardHeader";
 import {
   defaultDashboardDateString,
   getUtcDayChartInclusiveBounds,
   isValidUtcDateParam,
-} from "@/app/lib/readings/dayBounds";
+} from "@/app/lib/readings/dateUtils";
 import {
   getChartSunMarkersIso,
   getDawnDuskChartBounds,
@@ -42,18 +43,21 @@ export default async function Home({
 
   return (
     <div className="min-h-full flex-1 bg-[var(--app-page-bg)]">
-      <ReadingsDashboard
-        chartStartIso={chartBounds.start.toISOString()}
-        chartEndIso={chartBounds.end.toISOString()}
-        queryStartIso={queryBounds.start.toISOString()}
-        queryEndIso={queryBounds.end.toISOString()}
-        date={date}
-        sensor={sensor}
-        sunAxisActive={Boolean(coords)}
-        observerTimezone={getObserverTimezone()}
-        sunMarkers={sunMarkers}
-        observerLocationLabel={observerLocationLabel}
-      />
+      <div className="mx-auto flex w-full max-w-[min(100vw-10px,90rem)] flex-col gap-8 px-2 py-10 sm:px-3">
+        <ReadingsDashboardHeader />
+        <ReadingsDashboard
+          chartStartIso={chartBounds.start.toISOString()}
+          chartEndIso={chartBounds.end.toISOString()}
+          queryStartIso={queryBounds.start.toISOString()}
+          queryEndIso={queryBounds.end.toISOString()}
+          date={date}
+          sensor={sensor}
+          sunAxisActive={Boolean(coords)}
+          observerTimezone={getObserverTimezone()}
+          sunMarkers={sunMarkers}
+          observerLocationLabel={observerLocationLabel}
+        />
+      </div>
     </div>
   );
 }
