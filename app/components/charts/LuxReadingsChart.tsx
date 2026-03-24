@@ -1,6 +1,5 @@
 "use client";
 
-import { AxisBottom } from "@visx/axis";
 import { Brush } from "@visx/brush";
 import type BaseBrush from "@visx/brush/lib/BaseBrush";
 import type { BrushHandleRenderProps } from "@visx/brush/lib/BrushHandle";
@@ -35,8 +34,8 @@ const chartSeparation = 36;
 /** Inset inside the rounded brush “holder” card. */
 const brushHolderPadding = { top: 14, bottom: 16, left: 16, right: 16 };
 const overviewInnerHeight = 52;
-/** Smoother than `curveMonotoneX`; see https://visx.airbnb.tech/curves */
-const luxLineCurve = curveCatmullRom.alpha(0.65);
+/** Very smooth editorial curve feel. */
+const luxLineCurve = curveCatmullRom.alpha(0.9);
 /** SVG text does not always inherit `body`; keep aligned with global `font-sans` (Noto Sans). */
 const chartSansFontFamily =
   "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
@@ -361,6 +360,22 @@ function LuxReadingsChartInner({
     zoomDomain[0].getTime() !== dayStart.getTime() ||
     zoomDomain[1].getTime() !== dayEnd.getTime();
 
+  const edgeTimeLabels = useMemo(() => {
+    if (isZoomed) {
+      return {
+        left: formatXTick(zoomDomain[0]),
+        right: formatXTick(zoomDomain[1]),
+      };
+    }
+
+    const dawn = sunMarkers?.civilDawn ? new Date(sunMarkers.civilDawn) : dayStart;
+    const dusk = sunMarkers?.civilDusk ? new Date(sunMarkers.civilDusk) : dayEnd;
+    return {
+      left: `Dawn ${formatXTick(dawn)}`,
+      right: `Dusk ${formatXTick(dusk)}`,
+    };
+  }, [isZoomed, zoomDomain, sunMarkers, dayStart, dayEnd]);
+
   const onBrushChange = useCallback(
     (domain: Bounds | null) => {
       if (!domain) return;
@@ -663,20 +678,32 @@ function LuxReadingsChartInner({
             </>
           ) : null}
 
-          <AxisBottom
-            top={innerHeight}
-            scale={xScale}
-            tickFormat={formatXTick as never}
-            stroke="var(--chart-axis)"
-            tickStroke="var(--chart-axis)"
-            numTicks={8}
-            tickLabelProps={{
+          <text
+            x={0}
+            y={innerHeight + 18}
+            textAnchor="start"
+            dominantBaseline="hanging"
+            style={{
               fill: "var(--chart-tick)",
               fontSize: 11,
               fontFamily: chartSansFontFamily,
-              textAnchor: "middle",
             }}
-          />
+          >
+            {edgeTimeLabels.left}
+          </text>
+          <text
+            x={innerWidth}
+            y={innerHeight + 18}
+            textAnchor="end"
+            dominantBaseline="hanging"
+            style={{
+              fill: "var(--chart-tick)",
+              fontSize: 11,
+              fontFamily: chartSansFontFamily,
+            }}
+          >
+            {edgeTimeLabels.right}
+          </text>
         </Group>
 
         <Group

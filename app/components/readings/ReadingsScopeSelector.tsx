@@ -2,15 +2,9 @@
 
 export function ReadingsScopeSelector() {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <span
-        className="text-sm font-medium"
-        style={{ color: "var(--app-text-muted)" }}
-      >
-        Scope
-      </span>
+    <div className="flex flex-col items-center gap-1">
       <div
-        className="flex w-fit flex-wrap rounded-none border p-0.5"
+        className="flex w-fit flex-wrap rounded-none border p-0"
         style={{
           borderColor: "var(--app-card-border)",
           background: "var(--app-field-surface)",
@@ -20,19 +14,19 @@ export function ReadingsScopeSelector() {
       >
         <button
           type="button"
-          className="rounded-none px-3 py-1.5 text-xs font-medium transition-colors"
+          className="rounded-none px-2 py-0.5 text-xs font-medium leading-tight transition-colors"
           style={{
             background: "var(--app-page-bg-accent)",
             color: "var(--app-text)",
           }}
           aria-pressed="true"
         >
-          Single day
+          Day
         </button>
         <button
           type="button"
           disabled
-          className="rounded-none px-3 py-1.5 text-xs font-medium"
+          className="rounded-none px-2 py-0.5 text-xs font-medium leading-tight"
           style={{
             color: "var(--app-text-subtle)",
             cursor: "not-allowed",
@@ -44,7 +38,7 @@ export function ReadingsScopeSelector() {
           Multi-day
           <span className="sr-only">(coming soon)</span>
         </button>
-        <button
+        {/* <button
           type="button"
           disabled
           className="rounded-none px-3 py-1.5 text-xs font-medium"
@@ -73,7 +67,7 @@ export function ReadingsScopeSelector() {
         >
           Wavetable/LFO
           <span className="sr-only">(coming soon)</span>
-        </button>
+        </button> */}
       </div>
     </div>
   );
