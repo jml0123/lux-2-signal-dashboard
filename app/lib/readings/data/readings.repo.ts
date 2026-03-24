@@ -1,4 +1,13 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+function throwPostgrest(prefix: string, error: PostgrestError): never {
+  const bits = [`${prefix}: ${error.message}`];
+  if (error.code) bits.push(`code=${error.code}`);
+  if (error.details) bits.push(`details=${error.details}`);
+  if (error.hint) bits.push(`hint=${error.hint}`);
+  throw new Error(bits.join(" | "));
+}
 import { getUtcDayBounds } from "../dateUtils";
 import type {
   ReadingBucketedRow,
@@ -42,7 +51,7 @@ export async function getReadingsBucketed(
     p_location: null,
   });
   if (error) {
-    throw new Error(error.message);
+    throwPostgrest("readings_bucketed RPC", error);
   }
   return (data ?? []) as ReadingBucketedRow[];
 }
@@ -67,7 +76,7 @@ export async function getReadingsForTimeRange(
 
   const { data, error } = await q;
   if (error) {
-    throw new Error(error.message);
+    throwPostgrest("readings select", error);
   }
   return data ?? [];
 }
@@ -90,7 +99,7 @@ export async function getSensorNamesSupabase(): Promise<string[]> {
     .from("sensor_list")
     .select("sensor");
   if (error) {
-    throw new Error(error.message);
+    throwPostgrest("sensor_list select", error);
   }
   return (data ?? []).map((row: { sensor: string }) => row.sensor);
 }

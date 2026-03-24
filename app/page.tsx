@@ -4,6 +4,7 @@ import {
   clampReadingsDateParam,
   getUtcDayChartInclusiveBounds,
 } from "@/app/lib/readings/dateUtils";
+import { readingsDebugLog } from "@/app/lib/readings/debugReadingsLog";
 import {
   getChartSunMarkersIso,
   getDawnDuskChartBounds,
@@ -37,6 +38,19 @@ export default async function Home({
   const queryBounds = getReadingsQueryBounds(date, chartBounds);
   const sunMarkers = coords ? getChartSunMarkersIso(date, coords) : null;
   const observerLocationLabel = await resolveObserverLocationLabel(coords);
+
+  readingsDebugLog("page", {
+    dateRaw,
+    date,
+    sensor,
+    hasCoords: Boolean(coords),
+    observerTimezone: getObserverTimezone() ?? null,
+    chartStart: chartBounds.start.toISOString(),
+    chartEnd: chartBounds.end.toISOString(),
+    queryStart: queryBounds.start.toISOString(),
+    queryEnd: queryBounds.end.toISOString(),
+    sunMarkers,
+  });
 
   return (
     <div className="min-h-full flex-1 bg-[var(--app-page-bg)]">

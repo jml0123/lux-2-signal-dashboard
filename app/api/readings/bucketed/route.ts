@@ -3,6 +3,7 @@ import {
   isReadingsQueryRangeFullyBeforeToday,
 } from "@/app/lib/readings/dateUtils";
 import { getReadingsBucketed } from "@/app/lib/readings/data/readings";
+import { readingsDebugLog } from "@/app/lib/readings/debugReadingsLog";
 import { getObserverTimezone } from "@/app/lib/readings/sunChartBounds";
 
 export async function GET(req: Request) {
@@ -32,6 +33,16 @@ export async function GET(req: Request) {
       start,
       end,
       sensor: sensor.trim() ? sensor : undefined,
+    });
+    const first = rows[0];
+    const last = rows.length > 0 ? rows[rows.length - 1] : undefined;
+    readingsDebugLog("bucketed", {
+      qStart,
+      qEnd,
+      sensor: sensor.trim() || "(all)",
+      rowCount: rows.length,
+      firstBucket: first?.bucket_start ?? null,
+      lastBucket: last?.bucket_start ?? null,
     });
     const headers = new Headers();
     if (isReadingsQueryRangeFullyBeforeToday(end, getObserverTimezone())) {

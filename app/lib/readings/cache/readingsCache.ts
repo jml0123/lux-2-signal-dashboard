@@ -1,7 +1,7 @@
 import { isCompleteHistoricalReadingsDay } from "../dateUtils";
 import type { ReadingBucketedRow } from "../readings.types";
 
-const STORAGE_PREFIX = "lux:readings:v1:";
+const STORAGE_PREFIX = "lux:readings:v2:";
 const TTL_MS = 10 * 60 * 1000;
 
 type CachedPayload = { rows: ReadingBucketedRow[]; fetchedAt: number };

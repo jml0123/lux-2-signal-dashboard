@@ -25,7 +25,7 @@ export function ReadingsDashboardHeader() {
          style={{
           fontFamily: "var(--font-archivo), serif",
         }}
-         href="https://github.com/lux2signal/lux2signal" className="text-sm text-blue-500 italic hover:underline">📝 Docs</a>
+         href="https://miks.cafe/docs/physical-immersive/lux-2-signal" className="text-sm text-blue-500 italic hover:underline">📝 Docs</a>
       </div>
     </header>
   );
