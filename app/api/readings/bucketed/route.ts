@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getReadingsBucketed } from "@/app/lib/readings/api/readings";
+import { getReadingsBucketed } from "@/app/lib/readings/data/readings";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

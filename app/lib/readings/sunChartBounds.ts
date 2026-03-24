@@ -21,6 +21,76 @@ export function parseObserverCoords(): ObserverCoords | null {
   return { lat, lng };
 }
 
+/**
+ * Human-friendly location label for title area.
+ * Uses explicit env label when provided; falls back to raw coordinates.
+ */
+export function formatObserverLocationLabel(
+  coords: ObserverCoords | null,
+): string | null {
+  if (!coords) return null;
+  const configuredLabel = process.env.OBSERVER_LOCATION_LABEL?.trim();
+  if (configuredLabel) return configuredLabel;
+  return `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`;
+}
+
+function bestAddressLabel(address: Record<string, string | undefined>): string | null {
+  const cityLike = address.city ?? address.town ?? address.village ?? address.hamlet;
+  const state = address.state;
+  if (cityLike && state) return `${cityLike}, ${state}`;
+  if (cityLike) return cityLike;
+  if (state) return state;
+  return null;
+}
+
+/**
+ * Reverse geocodes observer coordinates to a human label (city/state) when possible.
+ * Falls back to configured env label, then raw coordinates.
+ */
+export async function resolveObserverLocationLabel(
+  coords: ObserverCoords | null,
+): Promise<string | null> {
+  if (!coords) return null;
+  const configured = process.env.OBSERVER_LOCATION_LABEL?.trim();
+  if (configured) return configured;
+
+  try {
+    const lat = coords.lat.toFixed(6);
+    const lon = coords.lng.toFixed(6);
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("lat", lat);
+    url.searchParams.set("lon", lon);
+    url.searchParams.set("zoom", "10");
+    url.searchParams.set("addressdetails", "1");
+
+    const res = await fetch(url, {
+      headers: {
+        // Nominatim asks clients to identify themselves.
+        "User-Agent": "lux-2-sound-dashboard/1.0",
+      },
+      // Revalidate occasionally to avoid repeated lookups.
+      next: { revalidate: 60 * 60 * 24 },
+    });
+    if (!res.ok) return `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`;
+    const data = (await res.json()) as {
+      address?: Record<string, string | undefined>;
+      name?: string;
+      display_name?: string;
+    };
+
+    const addr = data.address ?? {};
+    const label = bestAddressLabel(addr);
+    if (label) return label;
+    if (data.name?.trim()) return data.name.trim();
+    if (data.display_name?.trim()) return data.display_name.split(",")[0]?.trim() ?? null;
+  } catch {
+    // fall through to numeric fallback below
+  }
+
+  return `${coords.lat.toFixed(3)}, ${coords.lng.toFixed(3)}`;
+}
+
 export function getObserverTimezone(): string | undefined {
   const tz = process.env.OBSERVER_TIMEZONE?.trim();
   return tz || undefined;

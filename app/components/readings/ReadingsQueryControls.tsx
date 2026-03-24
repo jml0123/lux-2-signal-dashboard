@@ -1,7 +1,15 @@
 "use client";
 
+import { Calendar } from "primereact/calendar";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 import {
   readSensorsFromCache,
   writeSensorsToCache,
@@ -21,17 +29,48 @@ export type ReadingsQueryControlsProps = {
   observerTimezone?: string;
 };
 
-export function ReadingsQueryControls({
-  defaultDate,
-  defaultSensor,
-  observerTimezone,
-}: ReadingsQueryControlsProps) {
+export type ReadingsQueryControlsHandle = {
+  openDatePicker: () => void;
+};
+
+function toDateValue(dateStr: string): Date | null {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+function toDateParam(dateValue: Date): string {
+  const y = dateValue.getFullYear();
+  const m = String(dateValue.getMonth() + 1).padStart(2, "0");
+  const d = String(dateValue.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export const ReadingsQueryControls = forwardRef<
+  ReadingsQueryControlsHandle,
+  ReadingsQueryControlsProps
+>(function ReadingsQueryControls(
+  { defaultDate, defaultSensor, observerTimezone }: ReadingsQueryControlsProps,
+  ref,
+) {
   const router = useRouter();
   const [date, setDate] = useState(defaultDate);
   const [sensor, setSensor] = useState(defaultSensor);
   /** Empty on first paint so SSR and hydration match; cache/API fill in useEffect. */
   const [sensors, setSensors] = useState<string[]>([]);
   const [sensorLoadError, setSensorLoadError] = useState<string | null>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const calendarValue = useMemo(() => toDateValue(date), [date]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openDatePicker: () => {
+        setIsCalendarOpen(true);
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     setDate(defaultDate);
@@ -73,6 +112,7 @@ export function ReadingsQueryControls({
     (nextDate: string) => {
       setDate(nextDate);
       router.replace(buildQueryPath(nextDate, sensor));
+      setIsCalendarOpen(false);
     },
     [router, sensor],
   );
@@ -86,50 +126,17 @@ export function ReadingsQueryControls({
   );
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+    <div className="relative flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
       <label
-        className="flex flex-col gap-1 text-sm font-medium"
+        className="flex min-w-[8rem] flex-col gap-1"
         style={{ color: "var(--app-text-muted)" }}
       >
-        <span className="inline-flex flex-wrap items-center gap-x-2">
-          Date
-          {observerTimezone ? (
-            <span
-              className="font-normal"
-              style={{ color: "var(--app-text-subtle)" }}
-            >
-              ({observerTimezone})
-            </span>
-          ) : (
-            <span
-              className="font-normal"
-              style={{ color: "var(--app-text-subtle)" }}
-            >
-              (UTC)
-            </span>
-          )}
-        </span>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-          className="rounded-md border px-3 py-2"
-          style={{
-            borderColor: "var(--app-card-border)",
-            background: "var(--app-field-surface)",
-            color: "var(--app-text)",
-          }}
-        />
-      </label>
-      <label
-        className="flex min-w-[10rem] flex-col gap-1 text-sm font-medium"
-        style={{ color: "var(--app-text-muted)" }}
-      >
-        Sensor
+        <span className="sr-only">Sensor</span>
         <select
           value={sensor}
           onChange={(e) => onSensorChange(e.target.value)}
-          className="rounded-md border px-3 py-2"
+          aria-label="Sensor"
+          className="rounded-none border px-2 py-1 text-xs"
           style={{
             borderColor: "var(--app-card-border)",
             background: "var(--app-field-surface)",
@@ -149,6 +156,40 @@ export function ReadingsQueryControls({
           </span>
         ) : null}
       </label>
+      {isCalendarOpen ? (
+        <div
+          className="lux-date-picker absolute bottom-full right-0 z-40 mb-2 w-auto p-0"
+          style={{
+            background: "transparent",
+          }}
+          aria-label={`Date picker ${observerTimezone ? `(${observerTimezone})` : "(UTC)"}`}
+        >
+          <Calendar
+            value={calendarValue}
+            inline
+            showWeek
+            onChange={(e) => {
+              if (!e.value) return;
+              const picked = Array.isArray(e.value) ? e.value[0] : e.value;
+              if (!(picked instanceof Date)) return;
+              onDateChange(toDateParam(picked));
+            }}
+          />
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsCalendarOpen(false)}
+              className="border px-2 py-1 text-xs"
+              style={{
+                borderColor: "var(--app-card-border)",
+                color: "var(--app-text-muted)",
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
-}
+});

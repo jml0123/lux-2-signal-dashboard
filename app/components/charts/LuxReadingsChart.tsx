@@ -5,7 +5,7 @@ import { Brush } from "@visx/brush";
 import type BaseBrush from "@visx/brush/lib/BaseBrush";
 import type { BrushHandleRenderProps } from "@visx/brush/lib/BrushHandle";
 import type { Bounds } from "@visx/brush/lib/types";
-import { curveMonotoneX } from "@visx/curve";
+import { curveCatmullRom } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import {
   GlyphCircle,
@@ -21,6 +21,7 @@ import { Area, AreaClosed, LinePath } from "@visx/shape";
 import { defaultStyles, Tooltip, useTooltip } from "@visx/tooltip";
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { luxAreaGradientStopSpecs } from "@/app/lib/readings/readings.constants";
+import type { ChartDayTitleParts } from "@/app/lib/readings/formatChartDayTitle";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type { LuxChartPoint, LuxDualPoint } from "@/app/lib/readings/readings.types";
 import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
@@ -34,6 +35,13 @@ const chartSeparation = 36;
 /** Inset inside the rounded brush “holder” card. */
 const brushHolderPadding = { top: 14, bottom: 16, left: 16, right: 16 };
 const overviewInnerHeight = 52;
+/** Smoother than `curveMonotoneX`; see https://visx.airbnb.tech/curves */
+const luxLineCurve = curveCatmullRom.alpha(0.65);
+/** SVG text does not always inherit `body`; keep aligned with global `font-sans` (Noto Sans). */
+const chartSansFontFamily =
+  "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
+const chartEmojiMarkerFontFamily =
+  'var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", ui-sans-serif, sans-serif';
 /** @visx/glyph symbol size (see [visx glyphs](https://visx.airbnb.tech/glyphs)). */
 const SUN_GLYPH_SIZE = 44;
 const SUN_GLYPH_TOP = 14;
@@ -454,7 +462,6 @@ function LuxReadingsChartInner({
         role="img"
         aria-label="Lux readings chart"
       >
-        <title>Lux readings — hover for values, brush below to zoom time</title>
         <defs>
           <PatternLines
             id={brushPatternId}
@@ -512,7 +519,7 @@ function LuxReadingsChartInner({
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y0={(d) => yScale(Math.min(d.luxA, d.luxB))}
                 y1={(d) => yScale(Math.max(d.luxA, d.luxB))}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 fill={`url(#${luxAreaGradientId})`}
                 fillOpacity={0.92}
               />
@@ -520,7 +527,7 @@ function LuxReadingsChartInner({
                 data={dual!.points}
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.luxA)}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 stroke="var(--chart-line)"
                 strokeWidth={1.75}
                 fill="none"
@@ -529,7 +536,7 @@ function LuxReadingsChartInner({
                 data={dual!.points}
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.luxB)}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 stroke="var(--chart-line)"
                 strokeWidth={1.75}
                 strokeDasharray="6 4"
@@ -545,14 +552,14 @@ function LuxReadingsChartInner({
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.lux) ?? 0}
                 yScale={yScale}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 fill={`url(#${luxAreaGradientId})`}
               />
               <LinePath<LuxChartPoint>
                 data={points}
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.lux) ?? 0}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 stroke="var(--chart-line)"
                 strokeWidth={1.75}
                 fill="none"
@@ -607,8 +614,7 @@ function LuxReadingsChartInner({
               style={{
                 pointerEvents: "none",
                 userSelect: "none",
-                fontFamily:
-                  "system-ui, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+                fontFamily: chartEmojiMarkerFontFamily,
               }}
             >
               {CURSOR_MARKER_EMOJI}
@@ -630,8 +636,7 @@ function LuxReadingsChartInner({
                 style={{
                   pointerEvents: "none",
                   userSelect: "none",
-                  fontFamily:
-                    "system-ui, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+                  fontFamily: chartEmojiMarkerFontFamily,
                 }}
               >
                 {CURSOR_MARKER_EMOJI}
@@ -650,8 +655,7 @@ function LuxReadingsChartInner({
                 style={{
                   pointerEvents: "none",
                   userSelect: "none",
-                  fontFamily:
-                    "system-ui, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+                  fontFamily: chartEmojiMarkerFontFamily,
                 }}
               >
                 {CURSOR_MARKER_EMOJI}
@@ -669,6 +673,7 @@ function LuxReadingsChartInner({
             tickLabelProps={{
               fill: "var(--chart-tick)",
               fontSize: 11,
+              fontFamily: chartSansFontFamily,
               textAnchor: "middle",
             }}
           />
@@ -713,7 +718,7 @@ function LuxReadingsChartInner({
                 x={(d) => brushXScale(new Date(d.time)) ?? 0}
                 y={(d) => brushYScale(d.lux) ?? 0}
                 yScale={brushYScale}
-                curve={curveMonotoneX}
+                curve={luxLineCurve}
                 fill="var(--palette-celadon)"
                 fillOpacity={0.85}
                 style={{ pointerEvents: "none" }}
@@ -758,6 +763,7 @@ function LuxReadingsChartInner({
             border: "none",
             borderRadius: "6px",
             fontSize: 12,
+            fontFamily: chartSansFontFamily,
             padding: "8px 10px",
             zIndex: 20,
             ...(tooltipData.kind === "sun"
@@ -808,8 +814,9 @@ function LuxReadingsChartInner({
 }
 
 export type LuxReadingsChartProps = {
-  /** Human-readable calendar day for this chart (e.g. light data for that day). */
-  dayTitle?: string;
+  /** Centered chart heading: date row + weekday row (theme colors). */
+  chartDayTitle?: ChartDayTitleParts | null;
+  observerLocationLabel?: string | null;
   dayStartIso: string;
   dayEndIso: string;
   points: LuxChartPoint[];
@@ -821,7 +828,8 @@ export type LuxReadingsChartProps = {
 };
 
 export function LuxReadingsChart({
-  dayTitle,
+  chartDayTitle,
+  observerLocationLabel,
   dayStartIso,
   dayEndIso,
   points,
@@ -835,14 +843,6 @@ export function LuxReadingsChart({
 
   return (
     <div className={className ?? "w-full min-h-[380px]"}>
-      {dayTitle ? (
-        <h2
-          className="mb-3 text-lg font-semibold tracking-tight"
-          style={{ color: "var(--app-text)" }}
-        >
-          {dayTitle}
-        </h2>
-      ) : null}
       <ParentSize debounceTime={10}>
         {({ width }) =>
           width < 8 ? null : (
@@ -858,6 +858,46 @@ export function LuxReadingsChart({
           )
         }
       </ParentSize>
+      {chartDayTitle ? (
+        <div
+          className="font-display mt-3 w-full pr-5 text-right sm:mt-4 sm:pr-7 md:pr-8"
+          role="group"
+          aria-label="Chart date"
+        >
+          <div className="text-sm leading-tight">
+            <h2 className="flex flex-wrap items-center justify-end gap-x-2">
+              <span
+                className="font-normal tracking-tight"
+                style={{ color: "var(--chart-title-date)" }}
+              >
+                {chartDayTitle.dateLine}
+              </span>
+              {chartDayTitle.weekdayLine ? (
+                <span
+                  className="font-bold tracking-tight"
+                  style={{
+                    color: "var(--chart-title-weekday)",
+                    opacity: 0.88,
+                  }}
+                >
+                  {chartDayTitle.weekdayLine}
+                </span>
+              ) : null}
+            </h2>
+            {observerLocationLabel ? (
+              <div
+                className="mt-0.5 font-normal tracking-tight"
+                style={{
+                  color: "var(--chart-title-weekday)",
+                  opacity: 0.74,
+                }}
+              >
+                {observerLocationLabel}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

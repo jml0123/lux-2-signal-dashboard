@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSensorNames } from "@/app/lib/readings/api/sensors";
+import { fetchSensorNames } from "@/app/lib/readings/data/sensors";
 
 export async function GET() {
   try {

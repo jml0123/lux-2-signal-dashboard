@@ -10,6 +10,7 @@ import {
   getObserverTimezone,
   getReadingsQueryBounds,
   parseObserverCoords,
+  resolveObserverLocationLabel,
 } from "@/app/lib/readings/sunChartBounds";
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -37,6 +38,7 @@ export default async function Home({
     : getUtcDayChartInclusiveBounds(date);
   const queryBounds = getReadingsQueryBounds(date, chartBounds);
   const sunMarkers = coords ? getChartSunMarkersIso(date, coords) : null;
+  const observerLocationLabel = await resolveObserverLocationLabel(coords);
 
   return (
     <div className="min-h-full flex-1 bg-[var(--app-page-bg)]">
@@ -50,6 +52,7 @@ export default async function Home({
         sunAxisActive={Boolean(coords)}
         observerTimezone={getObserverTimezone()}
         sunMarkers={sunMarkers}
+        observerLocationLabel={observerLocationLabel}
       />
     </div>
   );
