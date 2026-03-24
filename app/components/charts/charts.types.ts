@@ -39,6 +39,8 @@ export type LuxReadingsSingleChartInnerProps = {
   sunMarkers?: ChartSunMarkersIso | null;
   /** Main-plot scrub: wall time under cursor (ms); `null` when pointer leaves plot or exits inner bounds (neutral page bg). */
   onAmbientScrubTime?: (timeMs: number | null) => void;
+  /** Centered over main plot (Metal); e.g. no buckets for current filters. */
+  emptyPlotMessage?: string | null;
 };
 
 export type LuxReadingsSingleChartProps = {
@@ -54,6 +56,8 @@ export type LuxReadingsSingleChartProps = {
   yDomain?: [number, number];
   className?: string;
   onAmbientScrubTime?: (timeMs: number | null) => void;
+  /** Shown centered on plot when set (Metal). */
+  emptyPlotMessage?: string | null;
 };
 
 export type LuxSunGlyphPointerPayload = {

@@ -9,8 +9,8 @@ import { Group } from "@visx/group";
 import { AreaClosed } from "@visx/shape";
 import type { PositionScale } from "@visx/shape/lib/types/base";
 import type { ReactNode, RefObject } from "react";
+import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
 import type { LuxChartPoint } from "@/app/lib/readings/readings.types";
-import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
 
 export function LuxBrushResizeHandle({
   x,
@@ -25,8 +25,8 @@ export function LuxBrushResizeHandle({
       <path
         fill="var(--app-field-surface)"
         d="M -4.5 0.5 L 3.5 0.5 L 3.5 15.5 L -4.5 15.5 L -4.5 0.5 M -1.5 4 L -1.5 12 M 0.5 4 L 0.5 12"
-        stroke={dashboardTheme.chartGlyphStroke}
-        strokeWidth={1}
+        stroke="var(--chart-glyph-stroke)"
+        strokeWidth={READINGS_STROKE_WIDTHS.brushResizeHandle}
         style={{ cursor: "ew-resize" }}
       />
     </Group>
@@ -87,7 +87,7 @@ export function LuxReadingsBrushStrip({
         rx={8}
         fill="var(--app-brush-holder-fill)"
         stroke="var(--app-brush-holder-border)"
-        strokeWidth={1}
+        strokeWidth={READINGS_STROKE_WIDTHS.brushHolderBorder}
       />
       <Group left={brushHolderPadding.left} top={brushHolderPadding.top}>
         {children}
@@ -118,7 +118,7 @@ export function LuxReadingsBrushStrip({
           selectedBoxStyle={{
             fill: `url(#${brushPatternId})`,
             stroke: "var(--chart-brush-selection-stroke)",
-            strokeWidth: 1.5,
+            strokeWidth: READINGS_STROKE_WIDTHS.brushSelection,
           }}
           renderBrushHandle={(props) => <LuxBrushResizeHandle {...props} />}
           useWindowMoveEvents

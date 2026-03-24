@@ -10,8 +10,13 @@ export function LuxReadingsChartTooltipContent({
   if (data.kind === "single") {
     return (
       <div className="flex flex-col gap-0.5">
-        <div>{formatTimeLabel(data.point.time)}</div>
-        <div className="font-medium tabular-nums">
+        <div style={{ color: "var(--chart-tooltip-fg)" }}>
+          {formatTimeLabel(data.point.time)}
+        </div>
+        <div
+          className="font-medium tabular-nums"
+          style={{ color: "var(--chart-line)" }}
+        >
           {Math.round(data.point.lux)} lux
         </div>
       </div>
@@ -20,17 +25,21 @@ export function LuxReadingsChartTooltipContent({
   if (data.kind === "dual") {
     return (
       <div className="flex flex-col gap-1">
-        <div>{formatTimeLabel(data.point.time)}</div>
-        <div className="tabular-nums">
-          <span style={{ color: "var(--palette-celadon)" }}>
-            {data.point.sensorA}:
-          </span>{" "}
+        <div style={{ color: "var(--chart-tooltip-fg)" }}>
+          {formatTimeLabel(data.point.time)}
+        </div>
+        <div
+          className="tabular-nums"
+          style={{ color: "var(--chart-line)" }}
+        >
+          <span className="font-medium">{data.point.sensorA}:</span>{" "}
           {Math.round(data.point.luxA)} lux
         </div>
-        <div className="tabular-nums">
-          <span style={{ color: "var(--palette-sea-green)" }}>
-            {data.point.sensorB}:
-          </span>{" "}
+        <div
+          className="tabular-nums"
+          style={{ color: "var(--chart-line-secondary)" }}
+        >
+          <span className="font-medium">{data.point.sensorB}:</span>{" "}
           {Math.round(data.point.luxB)} lux
         </div>
       </div>
@@ -38,8 +47,15 @@ export function LuxReadingsChartTooltipContent({
   }
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="font-semibold">{data.label}</div>
-      <div className="tabular-nums opacity-90">{data.timeLabel}</div>
+      <div className="font-semibold" style={{ color: "var(--ethereal-pearl-blue)" }}>
+        {data.label}
+      </div>
+      <div
+        className="tabular-nums"
+        style={{ color: "var(--chart-tooltip-fg)" }}
+      >
+        {data.timeLabel}
+      </div>
     </div>
   );
 }

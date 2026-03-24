@@ -11,6 +11,7 @@ import {
   readSensorsFromCache,
   writeSensorsToCache,
 } from "@/app/lib/readings/cache/sensorsCache";
+import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
 import { buildReadingsQueryPath } from "@/app/lib/readings/readingsQueryPath";
 
 export type ReadingsSensorSelectProps = {
@@ -31,7 +32,7 @@ const chevronDown = (
       d="M2.5 4.25L6 7.75L9.5 4.25"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth={READINGS_STROKE_WIDTHS.controlChevron}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -117,8 +118,11 @@ export function ReadingsSensorSelect({
   const label = sensor.trim() ? sensor.trim() : "All sensors";
 
   return (
-    <div ref={rootRef} className={`relative ${className ?? ""}`}>
-      <div className="font-display text-sm leading-tight">
+    <div
+      ref={rootRef}
+      className={`relative lux-chart-chrome ${className ?? ""}`}
+    >
+      <div className="text-sm leading-tight">
         <span className="sr-only">Sensor filter</span>
         <button
           type="button"

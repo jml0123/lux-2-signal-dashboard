@@ -30,9 +30,9 @@ import {
   LUX_CHART_AREA_FILL_OPACITY,
   LUX_CHART_BRUSH_AREA_FILL_OPACITY,
   luxAreaGradientStopSpecs,
+  READINGS_STROKE_WIDTHS,
 } from "@/app/lib/readings/readings.constants";
 import type { LuxChartPoint, LuxDualPoint } from "@/app/lib/readings/readings.types";
-import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
 import { LuxReadingsChartTooltipContent } from "./LuxReadingsChartTooltip";
 import { LuxReadingsBrushStrip } from "./LuxReadingsBrushStrip";
 import {
@@ -66,11 +66,11 @@ const luxLineCurve = LUX_READINGS_CHART_CURVE_STEPPED
 /** Area fill opacities from `readings.constants` (higher contrast on transparent plot). */
 const luxAreaFillOpacity = LUX_CHART_AREA_FILL_OPACITY;
 const luxBrushAreaFillOpacity = LUX_CHART_BRUSH_AREA_FILL_OPACITY;
-/** SVG text: align with global `font-sans` (Noto Sans). */
-const chartSansFontFamily =
-  "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
+/** SVG text + tooltip: Noto Sans Mono (same as chart masthead / filters). */
+const chartMonoFontFamily =
+  "var(--font-sans), ui-monospace, monospace";
 const chartEmojiMarkerFontFamily =
-  'var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", ui-sans-serif, sans-serif';
+  'var(--font-sans), "Apple Color Emoji", "Segoe UI Emoji", ui-monospace, monospace';
 /** Sun glyph vertical position in main plot inner coordinates. */
 const LUX_SUN_GLYPH_TOP = 14;
 const LUX_SUN_GLYPH_HIT_R = 22;
@@ -86,6 +86,7 @@ function LuxReadingsSingleChartInner({
   yDomain = defaultYDomain,
   sunMarkers = null,
   onAmbientScrubTime,
+  emptyPlotMessage = null,
 }: LuxReadingsSingleChartInnerProps) {
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = plotHeight - margin.top - margin.bottom;
@@ -383,7 +384,7 @@ function LuxReadingsSingleChartInner({
             y1={0}
             y2={overviewInnerHeight}
             stroke="var(--chart-sun-line)"
-            strokeWidth={1}
+            strokeWidth={READINGS_STROKE_WIDTHS.brushSunMarkerLine}
             strokeDasharray="3 2"
             opacity={0.65}
           />
@@ -398,7 +399,7 @@ function LuxReadingsSingleChartInner({
         <button
           type="button"
           onClick={onBrushResetClick}
-          className="absolute right-0 top-0 z-10 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition-colors"
+          className="lux-chart-chrome absolute right-0 top-0 z-10 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition-colors"
           style={{
             borderColor: "var(--app-card-border)",
             background: "var(--app-field-surface)",
@@ -420,10 +421,10 @@ function LuxReadingsSingleChartInner({
             id={brushPatternId}
             width={10}
             height={10}
-            stroke={dashboardTheme.chartStroke}
-            strokeWidth={1}
+            stroke="var(--chart-brush-pattern-stroke)"
+            strokeWidth={READINGS_STROKE_WIDTHS.brushPatternLine}
             orientation={["diagonal"]}
-            background="rgba(138, 184, 158, 0.22)"
+            background="color-mix(in srgb, var(--ethereal-pearl-blue) 22%, transparent)"
           />
         </defs>
         <Group left={margin.left} top={margin.top}>
@@ -460,7 +461,7 @@ function LuxReadingsSingleChartInner({
                 y1={0}
                 y2={innerHeight}
                 stroke="var(--chart-sun-line)"
-                strokeWidth={1}
+                strokeWidth={READINGS_STROKE_WIDTHS.sunMarkerLine}
                 strokeDasharray="4 3"
               />
             </g>
@@ -508,7 +509,7 @@ function LuxReadingsSingleChartInner({
                 y={(d) => yScale(d.luxA)}
                 curve={luxLineCurve}
                 stroke="var(--chart-line)"
-                strokeWidth={2}
+                strokeWidth={READINGS_STROKE_WIDTHS.dataLine}
                 fill="none"
               />
               <LinePath<LuxDualPoint>
@@ -517,7 +518,7 @@ function LuxReadingsSingleChartInner({
                 y={(d) => yScale(d.luxB)}
                 curve={luxLineCurve}
                 stroke="var(--chart-line-secondary)"
-                strokeWidth={2}
+                strokeWidth={READINGS_STROKE_WIDTHS.dataLine}
                 strokeDasharray="6 4"
                 fill="none"
               />
@@ -541,7 +542,7 @@ function LuxReadingsSingleChartInner({
                 y={(d) => yScale(d.lux) ?? 0}
                 curve={luxLineCurve}
                 stroke="var(--chart-line)"
-                strokeWidth={2}
+                strokeWidth={READINGS_STROKE_WIDTHS.dataLine}
                 fill="none"
               />
             </>
@@ -676,6 +677,31 @@ function LuxReadingsSingleChartInner({
         </LuxReadingsBrushStrip>
       </svg>
 
+      {emptyPlotMessage ? (
+        <div
+          aria-live="polite"
+          className="pointer-events-none absolute z-[5] flex items-center justify-center px-6 text-center text-sm leading-snug sm:px-10"
+          style={{
+            left: margin.left,
+            top: margin.top,
+            width: innerWidth,
+            height: innerHeight,
+            fontFamily: "var(--font-metal), serif",
+            whiteSpace: "pre-line",
+          }}
+        >
+          <span
+            className="px-1 py-0.5"
+            style={{
+              backgroundColor: "var(--chart-empty-plot-chip-bg)",
+              color: "var(--chart-empty-plot-chip-fg)",
+            }}
+          >
+            {emptyPlotMessage}
+          </span>
+        </div>
+      ) : null}
+
       {tooltipOpen && tooltipData && (
         <Tooltip
           top={tooltipTop}
@@ -684,10 +710,10 @@ function LuxReadingsSingleChartInner({
             ...defaultStyles,
             backgroundColor: "var(--chart-tooltip-bg)",
             color: "var(--chart-tooltip-fg)",
-            border: "none",
+            border: "1px solid var(--chart-tooltip-border)",
             borderRadius: "6px",
             fontSize: 12,
-            fontFamily: chartSansFontFamily,
+            fontFamily: chartMonoFontFamily,
             padding: "8px 10px",
             zIndex: 20,
             ...(tooltipData.kind === "sun"
@@ -723,6 +749,7 @@ export function LuxReadingsSingleChart({
   yDomain,
   className,
   onAmbientScrubTime,
+  emptyPlotMessage = null,
 }: LuxReadingsSingleChartProps) {
   const dayStart = useMemo(() => new Date(dayStartIso), [dayStartIso]);
   const dayEnd = useMemo(() => new Date(dayEndIso), [dayEndIso]);
@@ -741,18 +768,19 @@ export function LuxReadingsSingleChart({
               yDomain={yDomain}
               sunMarkers={sunMarkers}
               onAmbientScrubTime={onAmbientScrubTime}
+              emptyPlotMessage={emptyPlotMessage}
             />
           )
         }
       </ParentSize>
       {chartDayTitle ? (
         <div
-          className="font-display mt-3 w-full pr-5 text-right sm:mt-4 sm:pr-7 md:pr-8"
+          className="mt-3 w-full pr-5 text-right sm:mt-4 sm:pr-7 md:pr-8"
           role="group"
           aria-label="Chart date"
         >
           <div className="text-sm leading-tight">
-            <h2 className="flex flex-wrap items-center justify-end gap-x-2">
+            <h2 className="lux-masthead-datetime flex flex-wrap items-center justify-end gap-x-2">
               <span
                 className="font-semibold tracking-tight"
                 style={{ color: "var(--chart-title-date)" }}
@@ -772,7 +800,7 @@ export function LuxReadingsSingleChart({
             </h2>
             {observerLocationLabel ? (
               <div
-                className="mt-0.5 font-normal tracking-tight"
+                className="lux-masthead-location mt-0.5 font-normal tracking-tight"
                 style={{
                   color: "var(--chart-title-weekday)",
                   opacity: 0.74,

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LuxReadingsSingleChart } from "@/app/components/charts/lux-readings/LuxReadingsSingleChart";
 import { ReadingsQueryControls } from "@/app/components/readings/ReadingsQueryControls";
 import type { ReadingsQueryControlsHandle } from "@/app/components/readings/ReadingsQueryControls";
 import {
   bucketedRowsToDualLuxPoints,
   bucketedRowsToLuxChartPoints,
+  buildLuxTimelineForAmbient,
 } from "@/app/lib/readings/data/readings";
 import {
   readReadingsFromCache,
@@ -16,10 +17,9 @@ import {
 import { ReadingsScopeSelector } from "@/app/components/readings/ReadingsScopeSelector";
 import { ReadingsSensorSelect } from "@/app/components/readings/ReadingsSensorSelect";
 import { formatChartDayTitleParts } from "@/app/lib/readings/dateUtils";
-import {
-  buildAmbientTimeKnots,
-  computeAmbientPageGradient,
-} from "@/app/lib/readings/ambientLightScrub";
+import { buildAmbientTimeKnots } from "@/app/lib/readings/ambientLightScrub";
+import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
+import { useAnimatedAmbientScrubGradient } from "@/app/lib/readings/useAnimatedAmbientScrubGradient";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type {
   LuxChartPoint,
@@ -54,7 +54,6 @@ export function ReadingsDashboard({
   const [rows, setRows] = useState<ReadingBucketedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [ambientGradient, setAmbientGradient] = useState<string | null>(null);
 
   const ambientKnots = useMemo(
     () =>
@@ -64,26 +63,6 @@ export function ReadingsDashboard({
         sunMarkers,
       ),
     [chartStartIso, chartEndIso, sunMarkers],
-  );
-
-  useEffect(() => {
-    setAmbientGradient(null);
-  }, [date, chartStartIso, chartEndIso]);
-
-  const handleAmbientScrubTime = useCallback(
-    (timeMs: number | null) => {
-      if (timeMs === null) {
-        setAmbientGradient(null);
-        return;
-      }
-      setAmbientGradient(computeAmbientPageGradient(timeMs, ambientKnots));
-    },
-    [ambientKnots],
-  );
-
-  const chartDayTitle = useMemo(
-    () => formatChartDayTitleParts(date, observerTimezone),
-    [date, observerTimezone],
   );
 
   const { points, dual, pointCount } = useMemo(() => {
@@ -98,6 +77,19 @@ export function ReadingsDashboard({
     const pts = bucketedRowsToLuxChartPoints(rows);
     return { points: pts, dual: undefined, pointCount: pts.length };
   }, [rows, sensor]);
+
+  const luxTimeline = useMemo(() => buildLuxTimelineForAmbient(rows), [rows]);
+
+  const { overlayGradientCss, onAmbientScrubTime } = useAnimatedAmbientScrubGradient({
+    ambientKnots,
+    luxTimeline,
+    resetDeps: [date, chartStartIso, chartEndIso],
+  });
+
+  const chartDayTitle = useMemo(
+    () => formatChartDayTitleParts(date, observerTimezone),
+    [date, observerTimezone],
+  );
 
   useEffect(() => {
     const key = readingsCacheKey(date, sensor, queryStartIso, queryEndIso);
@@ -165,12 +157,6 @@ export function ReadingsDashboard({
           Loading readings…
         </p>
       ) : null}
-      {!loading && pointCount === 0 ? (
-        <p className="text-sm" style={{ color: "var(--app-text-subtle)" }}>
-          No readings in the loaded window for the current filters. The chart still shows
-          the full axis so you can see when data will appear.
-        </p>
-      ) : null}
       {!loading && pointCount === 1 ? (
         <p className="text-sm" style={{ color: "var(--app-text-subtle)" }}>
           One bucket loaded; at least two are needed to draw the series.
@@ -191,14 +177,19 @@ export function ReadingsDashboard({
           points={points}
           dual={dual}
           sunMarkers={sunMarkers}
-          onAmbientScrubTime={handleAmbientScrubTime}
+          onAmbientScrubTime={onAmbientScrubTime}
+          emptyPlotMessage={
+            !loading && pointCount === 0
+              ? "No data has been collected for this day yet (it might be the future). Check back again later!"
+              : null
+          }
         />
       </div>
       <div className="-mt-6 flex justify-end px-1 sm:px-2">
         <div className="flex flex-col items-end gap-2">
           {chartDayTitle ? (
-            <div className="font-display text-right text-sm leading-tight">
-            <h2 className="flex flex-wrap items-center justify-end gap-x-2">
+            <div className="text-right text-sm leading-tight">
+            <h2 className="lux-masthead-datetime flex flex-wrap items-center justify-end gap-x-2">
               <span className="tracking-tight">
                 <button
                   type="button"
@@ -219,7 +210,7 @@ export function ReadingsDashboard({
                       d="M2.5 4.25L6 7.75L9.5 4.25"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="1.2"
+                      strokeWidth={READINGS_STROKE_WIDTHS.controlChevron}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -239,7 +230,7 @@ export function ReadingsDashboard({
             </h2>
             {observerLocationLabel ? (
               <div
-                className="mt-0.5 font-normal tracking-tight"
+                className="lux-masthead-location mt-0.5 font-normal tracking-tight"
                 style={{
                   color: "var(--chart-title-weekday)",
                   opacity: 0.74,
@@ -259,12 +250,12 @@ export function ReadingsDashboard({
         </div>
       </div>
       </div>
-      {ambientGradient ? (
+      {overlayGradientCss ? (
         <div
           aria-hidden
           className="pointer-events-none fixed inset-0 z-0"
           style={{
-            backgroundImage: `linear-gradient(var(--ambient-scrub-wash), var(--ambient-scrub-wash)), ${ambientGradient}`,
+            backgroundImage: `linear-gradient(var(--ambient-scrub-wash), var(--ambient-scrub-wash)), ${overlayGradientCss}`,
           }}
         />
       ) : null}

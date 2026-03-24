@@ -117,6 +117,54 @@ export function bucketedRowsToLuxChartPoints(
     }));
 }
 
+/** Sorted bucket starts (ms) + lux for ambient scrub: **max** `value_avg` per `bucket_start` across sensors. */
+export type LuxTimelineBucket = { timeMs: number; lux: number };
+
+export function buildLuxTimelineForAmbient(rows: ReadingBucketedRow[]): LuxTimelineBucket[] {
+  const byTime = new Map<string, number>();
+  for (const r of rows) {
+    const t =
+      typeof r.bucket_start === "string"
+        ? r.bucket_start
+        : String(r.bucket_start);
+    const lux = Number(r.value_avg);
+    if (!Number.isFinite(lux)) continue;
+    const prev = byTime.get(t);
+    byTime.set(t, prev === undefined ? lux : Math.max(prev, lux));
+  }
+  const out = [...byTime.entries()]
+    .map(([time, lux]) => ({ timeMs: new Date(time).getTime(), lux }))
+    .filter((b) => Number.isFinite(b.timeMs));
+  out.sort((a, b) => a.timeMs - b.timeMs);
+  return out;
+}
+
+/**
+ * Step series: lux from the latest bucket with `timeMs <= t` (holds until the next bucket).
+ * Returns null before the first bucket or when the timeline is empty.
+ */
+export function luxAtTimeMsFromTimeline(
+  timeline: LuxTimelineBucket[],
+  timeMs: number,
+): number | null {
+  if (timeline.length === 0) return null;
+  let lo = 0;
+  let hi = timeline.length - 1;
+  let ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const t = timeline[mid]!.timeMs;
+    if (t <= timeMs) {
+      ans = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (ans < 0) return null;
+  return timeline[ans]!.lux;
+}
+
 export async function getAvailableSensors(): Promise<string[]> {
   return getSensorNamesSupabase();
 }

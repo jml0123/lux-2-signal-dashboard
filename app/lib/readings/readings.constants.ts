@@ -15,9 +15,54 @@ export const LUX_THRESHOLDS = [
   { label: "very bright", min: 3000, max: 4095, color: "#e8ddaa" },
 ] as const;
 
+/**
+ * Full-screen scrub backdrop: `'lux'` follows sensor brightness; `'time'` follows solar time
+ * along the axis (e.g. for a future multi-day view). Toggle here only — no UI control.
+ */
+export type AmbientPageScrubDriveMode = "time" | "lux";
+
+export const AMBIENT_PAGE_SCRUB_DRIVE_MODE: AmbientPageScrubDriveMode = "lux";
+
+/**
+ * Lux **at or above** this uses the brightest sun-palette stops. Values below are mapped
+ * **linearly** from 0…this.
+ */
+export const AMBIENT_LUX_SCRUB_PALETTE_CAP_LUX = 3700;
+
+/**
+ * Lux scrub maps to sun-palette stop index 0…this. Stops ~10–11 are **dusk** (dim purple) in
+ * `AMBIENT_LIGHT_COLORS` — do not map high lux there or bright readings look muddy.
+ * ~7 ≈ solar noon (warm white).
+ */
+export const AMBIENT_LUX_SCRUB_MAX_STOP_INDEX = 7;
+
 /** Main + brush lux area fill opacities (0–1). Higher = more legible on busy backgrounds. */
 export const LUX_CHART_AREA_FILL_OPACITY = 0.38;
 export const LUX_CHART_BRUSH_AREA_FILL_OPACITY = 0.42;
+
+/**
+ * SVG stroke widths for lux charts + readings chrome. Adjust here instead of scattered literals.
+ */
+export const READINGS_STROKE_WIDTHS = {
+  /** Vertical sun time lines on the main plot. */
+  sunMarkerLine: 1,
+  /** Vertical sun time lines on the brush/overview strip. */
+  brushSunMarkerLine: 1,
+  /** Diagonal hatch lines inside the brush selection (visx PatternLines). */
+  brushPatternLine: 1,
+  /** Single-sensor lux trace and each dual-sensor trace. */
+  dataLine: 2.17,
+  /** Rounded brush holder card outline. */
+  brushHolderBorder: 1,
+  /** Left/right brush resize handle glyph. */
+  brushResizeHandle: 1,
+  /** Selected time range rectangle on the brush. */
+  brushSelection: 1.5,
+  /** Sun marker glyph outlines (visx Glyph*). */
+  sunGlyph: 0.33,
+  /** Chevron on date control + sensor select (keep in sync). */
+  controlChevron: 1.2,
+} as const;
 
 /**
  * Dual-sensor mode: when |luxA − luxB| ≤ this (same bucket), the band is tinted with

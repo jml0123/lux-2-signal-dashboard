@@ -1,25 +1,11 @@
+import {
+  AMBIENT_LUX_SCRUB_MAX_STOP_INDEX,
+  AMBIENT_LUX_SCRUB_PALETTE_CAP_LUX,
+} from "@/app/lib/readings/readings.constants";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
+import { AMBIENT_LIGHT_COLORS } from "@/app/lib/theme/dashboardTheme";
 
-/**
- * Ordered palette for one civil day on the chart axis (pre-dawn → post-dusk).
- * Index 0 and 11 match so scrubbing the chart ends loops seamlessly at deep navy.
- * Saturated for legibility through `--ambient-scrub-wash` on the page overlay.
- * Edit here only — knots map solar times onto stop indices 0…11.
- */
-export const AMBIENT_LIGHT_COLORS: readonly string[] = [
-  "#141a38", // 1  pre-dawn (blue-shifted navy)
-  "#242174", // 2  civil twilight
-  "#7a2f98", // 3  sunrise
-  "#d4561c", // 4  just after sunrise
-  "#f08522", // 5  morning
-  "#ffc870", // 6  mid-morning
-  "#fff2b0", // 7  solar noon (warm white)
-  "#ffbe58", // 8  early afternoon
-  "#ff9a30", // 9  late afternoon
-  "#e45618", // 10 golden hour
-  "#9c2f68", // 11 dusk
-  "#141a38", // 12 post-dusk (loop to pre-dawn)
-] as const;
+export { AMBIENT_LIGHT_COLORS };
 
 /** Half-width in “stop index” space for vertical gradient (top = s − spread, bottom = s + spread). */
 export const AMBIENT_VERTICAL_STOP_SPREAD = 0.55;
@@ -48,7 +34,7 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
-function lerpColor(a: string, b: string, t: number): string {
+export function lerpColor(a: string, b: string, t: number): string {
   const A = hexToRgb(a);
   const B = hexToRgb(b);
   const u = clamp(t, 0, 1);
@@ -57,6 +43,20 @@ function lerpColor(a: string, b: string, t: number): string {
     A[1] + (B[1] - A[1]) * u,
     A[2] + (B[2] - A[2]) * u,
   );
+}
+
+export type AmbientGradientEndpoints = { top: string; bottom: string };
+
+/**
+ * Map lux to sun-palette position: linear 0…cap → stops 0…`AMBIENT_LUX_SCRUB_MAX_STOP_INDEX`
+ * (bright day band). ≥ cap hits max stop — **not** palette index 11 (dusk).
+ */
+export function luxToAmbientStopIndex(lux: number): number {
+  const cap = Math.max(1, AMBIENT_LUX_SCRUB_PALETTE_CAP_LUX);
+  const brightSpan = Math.max(0.5, AMBIENT_LUX_SCRUB_MAX_STOP_INDEX);
+  const x = Math.max(0, Number(lux));
+  const u = Math.min(1, x / cap);
+  return u * brightSpan;
 }
 
 /** Smooth blend along palette stops; `s` in [0, 11]. */
@@ -70,6 +70,30 @@ export function colorAtStopIndex(s: number): string {
     AMBIENT_LIGHT_COLORS[i + 1]!,
     f,
   );
+}
+
+export function ambientGradientEndpointsAtStop(s: number): AmbientGradientEndpoints {
+  const sc = clamp(s, 0, AMBIENT_LIGHT_COLORS.length - 1);
+  return {
+    top: colorAtStopIndex(sc - AMBIENT_VERTICAL_STOP_SPREAD),
+    bottom: colorAtStopIndex(sc + AMBIENT_VERTICAL_STOP_SPREAD),
+  };
+}
+
+export function ambientPageGradientCss(endpoints: AmbientGradientEndpoints): string {
+  return `linear-gradient(180deg, ${endpoints.top}, ${endpoints.bottom})`;
+}
+
+export function lerpAmbientEndpoints(
+  a: AmbientGradientEndpoints,
+  b: AmbientGradientEndpoints,
+  t: number,
+): AmbientGradientEndpoints {
+  const u = clamp(t, 0, 1);
+  return {
+    top: lerpColor(a.top, b.top, u),
+    bottom: lerpColor(a.bottom, b.bottom, u),
+  };
 }
 
 /**
@@ -169,7 +193,9 @@ export function computeAmbientPageGradient(
   knots: AmbientTimeKnot[],
 ): string {
   const s = timeMsToStopIndex(timeMs, knots);
-  const top = colorAtStopIndex(s - AMBIENT_VERTICAL_STOP_SPREAD);
-  const bottom = colorAtStopIndex(s + AMBIENT_VERTICAL_STOP_SPREAD);
-  return `linear-gradient(180deg, ${top}, ${bottom})`;
+  return ambientPageGradientCss(ambientGradientEndpointsAtStop(s));
+}
+
+export function computeAmbientPageGradientFromLux(lux: number): string {
+  return ambientPageGradientCss(ambientGradientEndpointsAtStop(luxToAmbientStopIndex(lux)));
 }

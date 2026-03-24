@@ -11,6 +11,7 @@ import type {
   SunMarkerKind,
   SunMarkerLayout,
 } from "@/app/components/charts/charts.types";
+import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
 import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
 
 /** @visx/glyph symbol size (see [visx glyphs](https://visx.airbnb.tech/glyphs)). */
@@ -35,8 +36,8 @@ export function SunGlyphShape({
   top: number;
   size?: number;
 }) {
-  const stroke = dashboardTheme.chartGlyphStroke;
-  const strokeWidth = 1;
+  const stroke = "var(--chart-glyph-stroke)";
+  const strokeWidth = READINGS_STROKE_WIDTHS.sunGlyph;
   switch (kind) {
     case "civilDawn":
       return (

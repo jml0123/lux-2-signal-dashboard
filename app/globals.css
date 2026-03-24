@@ -5,13 +5,13 @@
 
 /*
  * `data-theme` on <html>: "light" | "dark" (prefers-color-scheme + SystemThemeSync).
- * Brand + chart tokens stay the same in both themes (lux greens unchanged).
- * App chrome (page, cards, text, inputs) uses --app-* per theme.
+ * Literal hex/rgba below: keep aligned with `app/lib/theme/dashboardTheme.ts`
+ * (`earthyGreensPalette`, `etherealPalette`, `AMBIENT_LIGHT_COLORS`).
  */
 html {
   /* Default until `data-theme` is set (beforeInteractive script). */
   --readings-header-title-color: #0a0a0a;
-  /* Brand library — keep in sync with `dashboardTheme.brandPalette` */
+  /* Brand library */
   --brand-deep-forest: #094630;
   --brand-sea-green: #058b64;
   --brand-pine-teal: #283f2e;
@@ -34,13 +34,13 @@ html {
   --ethereal-sky-slate: #8aaabb;
   --ethereal-aurora: #7ab8a8;
 
-  /* Shared chart chrome (tooltip); axis/ticks/grid/lines are theme-specific below. */
-  --chart-tooltip-bg: color-mix(
-    in srgb,
-    var(--ethereal-dusk-violet) 18%,
-    rgba(12, 14, 22, 0.94)
-  );
-  --chart-tooltip-fg: #f4f6fb;
+  /* Tooltip: SSR / pre-theme fallback (aligned with light UI). */
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-fg: var(--palette-deep-teal);
+  --chart-tooltip-border: rgba(7, 36, 20, 0.12);
+  /* Empty-plot message chip (overrides below per theme). */
+  --chart-empty-plot-chip-bg: #111827;
+  --chart-empty-plot-chip-fg: #f4f0fb;
 }
 
 html[data-theme="light"] {
@@ -63,6 +63,7 @@ html[data-theme="light"] {
   --chart-line-secondary: var(--ethereal-rose-dusk);
   --chart-brush-pattern-stroke: var(--ethereal-pearl-blue);
   --chart-brush-selection-stroke: var(--ethereal-aurora);
+  --chart-glyph-stroke: var(--ethereal-dusk-violet);
   --chart-area: color-mix(in srgb, var(--ethereal-aurora) 24%, transparent);
   --chart-area-overview: color-mix(in srgb, var(--ethereal-mist-sage) 22%, transparent);
   --chart-brush-overview-fill: color-mix(
@@ -82,15 +83,26 @@ html[data-theme="light"] {
   --app-field-surface: #ffffff;
   --background: var(--app-page-bg);
   --foreground: var(--app-text);
-  /* Chart masthead: same palette, pulled toward body text for contrast (not flat black). */
-  --chart-title-date: color-mix(in srgb, var(--ethereal-dusk-violet) 58%, var(--app-text) 42%);
-  --chart-title-weekday: color-mix(
-    in srgb,
-    var(--ethereal-sky-slate) 50%,
-    var(--app-text) 50%
-  );
+  /* Slightly deeper than base swatches (tiny ink — keeps hue). */
+  --chart-title-date: color-mix(in srgb, var(--ethereal-dusk-violet) 90%, #14141c 10%);
+  --chart-title-weekday: color-mix(in srgb, var(--ethereal-sky-slate) 90%, #14141c 10%);
   /* Dashboard page title (Metal); near-black on light page bg. */
   --readings-header-title-color: #0a0a0a;
+  /* Match app cards; lux values use --chart-line / --chart-line-secondary in tooltip content. */
+  --chart-tooltip-bg: color-mix(
+    in srgb,
+    var(--app-card-surface) 94%,
+    var(--ethereal-dusk-violet) 6%
+  );
+  --chart-tooltip-fg: var(--app-text-subtle);
+  --chart-tooltip-border: var(--app-card-border);
+  /* Dark chip + light label (readable on bright ambient scrub). */
+  --chart-empty-plot-chip-bg: #111827;
+  --chart-empty-plot-chip-fg: color-mix(
+    in srgb,
+    var(--ethereal-dawn-lavender) 38%,
+    #fafafa 62%
+  );
 }
 
 html[data-theme="dark"] {
@@ -111,6 +123,7 @@ html[data-theme="dark"] {
   --chart-line-secondary: var(--ethereal-aurora);
   --chart-brush-pattern-stroke: var(--ethereal-pearl-blue);
   --chart-brush-selection-stroke: var(--ethereal-aurora);
+  --chart-glyph-stroke: var(--ethereal-dawn-lavender);
   --chart-area: color-mix(in srgb, var(--ethereal-aurora) 26%, transparent);
   --chart-area-overview: color-mix(in srgb, var(--ethereal-pearl-blue) 22%, transparent);
   --chart-brush-overview-fill: color-mix(
@@ -133,29 +146,65 @@ html[data-theme="dark"] {
   --app-field-surface: #343a36;
   --background: var(--app-page-bg);
   --foreground: var(--app-text);
-  /* Brighter mix toward primary text; keeps lavender / pearl in the hue. */
-  --chart-title-date: color-mix(in srgb, var(--ethereal-dawn-lavender) 44%, var(--app-text) 56%);
-  --chart-title-weekday: color-mix(
-    in srgb,
-    var(--ethereal-pearl-blue) 36%,
-    var(--app-text) 64%
-  );
+  --chart-title-date: color-mix(in srgb, var(--ethereal-dawn-lavender) 86%, #050508 14%);
+  --chart-title-weekday: color-mix(in srgb, var(--ethereal-pearl-blue) 86%, #050508 14%);
   --readings-header-title-color: #fafafa;
+  --chart-tooltip-bg: color-mix(
+    in srgb,
+    var(--app-card-surface) 88%,
+    var(--ethereal-dusk-violet) 12%
+  );
+  --chart-tooltip-fg: var(--app-text-subtle);
+  --chart-tooltip-border: var(--app-card-border);
+  /* Flipped: light chip + ethereal ink (matches chart title mixes; readable on `#ecece8`). */
+  --chart-empty-plot-chip-bg: #ecece8;
+  --chart-empty-plot-chip-fg: var(--chart-title-weekday);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans);
+  --font-sans: var(--font-noto-sans-mono);
   /* Headlines (Archivo, via layout.tsx) */
   --font-display: var(--font-archivo);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-noto-sans-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-monospace, monospace;
+}
+
+/* Date picker popover: Archivo. */
+.lux-date-picker,
+.lux-date-picker button,
+.lux-date-picker .p-component,
+.lux-date-picker .p-inputtext {
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* Chart masthead: date + weekday (Archivo); date button uses same face. */
+.lux-masthead-datetime,
+.lux-masthead-datetime button {
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Observer location under masthead: Noto Sans Mono. */
+.lux-masthead-location {
+  font-family: var(--font-metal), ui-monospace, monospace;
+}
+
+/* Day / Multi-day scope: Noto Sans (proportional). */
+.lux-scope-segment,
+.lux-scope-segment button {
+  font-family: var(--font-noto-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Sensor filter etc.: Noto Sans Mono. */
+.lux-chart-chrome,
+.lux-chart-chrome button {
+  font-family: var(--font-noto-sans-mono), ui-monospace, monospace;
 }
 
 /* Flat control style across the app. */

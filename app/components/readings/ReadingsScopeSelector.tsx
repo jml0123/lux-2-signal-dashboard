@@ -4,7 +4,7 @@ export function ReadingsScopeSelector() {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className="font-display flex w-fit flex-wrap gap-px rounded-md border p-0.5 shadow-sm"
+        className="lux-scope-segment flex w-fit flex-wrap gap-px rounded-md border p-0.5 shadow-sm"
         style={{
           borderColor: "var(--app-card-border)",
           background: "var(--app-card-surface)",
