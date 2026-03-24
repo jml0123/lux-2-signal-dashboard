@@ -1,14 +1,29 @@
+/** First UTC calendar day present in the lux readings dataset (`YYYY-MM-DD`). */
+export const READINGS_DATA_EPOCH_DATE = "2026-03-22";
+
 /**
  * Lux bands for UI / chart styling. `color` is the hue at each band start for the area
- * gradient: **lower lux → darker green**, **higher lux → lighter green** (brighter scene).
+ * gradient: **lower lux → deeper dusk**, **higher lux → airy gold/lilac** (brighter scene).
+ * Matches `globals.css` ethereal palette (`--ethereal-*`). Tuned for transparent plot +
+ * ambient page scrub.
  */
 export const LUX_THRESHOLDS = [
-  { label: "dark", min: 0, max: 100, color: "#2f5d40" },
-  { label: "dim", min: 100, max: 500, color: "#3d6b48" },
-  { label: "moderate", min: 500, max: 2000, color: "#62996d" },
-  { label: "bright", min: 2000, max: 3000, color: "#94c597" },
-  { label: "very bright", min: 3000, max: 4095, color: "#e8f4e9" },
+  { label: "dark", min: 0, max: 100, color: "#3d3554" },
+  { label: "dim", min: 100, max: 500, color: "#8b7ab8" },
+  { label: "moderate", min: 500, max: 2000, color: "#7aaab8" },
+  { label: "bright", min: 2000, max: 3000, color: "#a896cc" },
+  { label: "very bright", min: 3000, max: 4095, color: "#e8ddaa" },
 ] as const;
+
+/** Main + brush lux area fill opacities (0–1). Higher = more legible on busy backgrounds. */
+export const LUX_CHART_AREA_FILL_OPACITY = 0.38;
+export const LUX_CHART_BRUSH_AREA_FILL_OPACITY = 0.42;
+
+/**
+ * Dual-sensor mode: when |luxA − luxB| ≤ this (same bucket), the band is tinted with
+ * `--chart-dual-overlap-fill` so agreement stands out from the divergent envelope.
+ */
+export const DUAL_SENSOR_OVERLAP_MAX_LUX = 120;
 
 type LinearScale = {
   (n: number): number;

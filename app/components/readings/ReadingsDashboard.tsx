@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuxReadingsSingleChart } from "@/app/components/charts/lux-readings/LuxReadingsSingleChart";
 import { ReadingsQueryControls } from "@/app/components/readings/ReadingsQueryControls";
 import type { ReadingsQueryControlsHandle } from "@/app/components/readings/ReadingsQueryControls";
@@ -16,6 +16,10 @@ import {
 import { ReadingsScopeSelector } from "@/app/components/readings/ReadingsScopeSelector";
 import { ReadingsSensorSelect } from "@/app/components/readings/ReadingsSensorSelect";
 import { formatChartDayTitleParts } from "@/app/lib/readings/dateUtils";
+import {
+  buildAmbientTimeKnots,
+  computeAmbientPageGradient,
+} from "@/app/lib/readings/ambientLightScrub";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type {
   LuxChartPoint,
@@ -50,6 +54,32 @@ export function ReadingsDashboard({
   const [rows, setRows] = useState<ReadingBucketedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [ambientGradient, setAmbientGradient] = useState<string | null>(null);
+
+  const ambientKnots = useMemo(
+    () =>
+      buildAmbientTimeKnots(
+        new Date(chartStartIso).getTime(),
+        new Date(chartEndIso).getTime(),
+        sunMarkers,
+      ),
+    [chartStartIso, chartEndIso, sunMarkers],
+  );
+
+  useEffect(() => {
+    setAmbientGradient(null);
+  }, [date, chartStartIso, chartEndIso]);
+
+  const handleAmbientScrubTime = useCallback(
+    (timeMs: number | null) => {
+      if (timeMs === null) {
+        setAmbientGradient(null);
+        return;
+      }
+      setAmbientGradient(computeAmbientPageGradient(timeMs, ambientKnots));
+    },
+    [ambientKnots],
+  );
 
   const chartDayTitle = useMemo(
     () => formatChartDayTitleParts(date, observerTimezone),
@@ -71,7 +101,7 @@ export function ReadingsDashboard({
 
   useEffect(() => {
     const key = readingsCacheKey(date, sensor, queryStartIso, queryEndIso);
-    const cached = readReadingsFromCache(key);
+    const cached = readReadingsFromCache(key, date, observerTimezone);
     if (cached) {
       setRows(cached);
       setLoadError(null);
@@ -119,10 +149,11 @@ export function ReadingsDashboard({
     return () => {
       cancelled = true;
     };
-  }, [date, sensor, queryStartIso, queryEndIso]);
+  }, [date, sensor, queryStartIso, queryEndIso, observerTimezone]);
 
   return (
     <>
+      <div className="relative z-[1]">
       <div className="flex justify-center">
         <ReadingsScopeSelector />
       </div>
@@ -160,6 +191,7 @@ export function ReadingsDashboard({
           points={points}
           dual={dual}
           sunMarkers={sunMarkers}
+          onAmbientScrubTime={handleAmbientScrubTime}
         />
       </div>
       <div className="-mt-6 flex justify-end px-1 sm:px-2">
@@ -167,13 +199,11 @@ export function ReadingsDashboard({
           {chartDayTitle ? (
             <div className="font-display text-right text-sm leading-tight">
             <h2 className="flex flex-wrap items-center justify-end gap-x-2">
-              <span
-                className="font-normal tracking-tight"
-              >
+              <span className="tracking-tight">
                 <button
                   type="button"
                   onClick={() => queryControlsRef.current?.openDatePicker()}
-                  className="group inline-flex cursor-pointer items-center gap-0.5 underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
+                  className="group inline-flex cursor-pointer items-center gap-0.5 font-semibold underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
                   style={{ color: "var(--chart-title-date)" }}
                   aria-label="Open date picker"
                 >
@@ -201,7 +231,6 @@ export function ReadingsDashboard({
                   className="font-bold tracking-tight"
                   style={{
                     color: "var(--chart-title-weekday)",
-                    opacity: 0.88,
                   }}
                 >
                   {chartDayTitle.weekdayLine}
@@ -229,6 +258,16 @@ export function ReadingsDashboard({
           />
         </div>
       </div>
+      </div>
+      {ambientGradient ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0"
+          style={{
+            backgroundImage: `linear-gradient(var(--ambient-scrub-wash), var(--ambient-scrub-wash)), ${ambientGradient}`,
+          }}
+        />
+      ) : null}
     </>
   );
 }

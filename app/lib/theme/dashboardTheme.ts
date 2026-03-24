@@ -1,7 +1,8 @@
 /**
  * Dashboard theme. Mirror brand hexes in `app/globals.css` (`--brand-*`).
+ * Ethereal chart accents mirror `--ethereal-*` in `globals.css`.
  * Light/dark app chrome (`--app-*`, page bg `#ededed` / `#333833`) lives in
- * `globals.css` on `html[data-theme="light"|"dark"]`. Chart greens stay on `html`.
+ * `globals.css` on `html[data-theme="light"|"dark"]`.
  */
 export const brandPalette = {
   deepForest: "#094630",
@@ -16,10 +17,10 @@ export type BrandPaletteKey = keyof typeof brandPalette;
 export const dashboardTheme = {
   brandPalette,
 
-  /** Axis + lux series line strokes (`--chart-axis`, `--chart-line`). */
-  chartStroke: brandPalette.pineTeal,
-  /** Sun-event glyph outlines on `LuxReadingsSingleChart`. */
-  chartGlyphStroke: brandPalette.turfGreen,
+  /** Pattern / brush hatch stroke — mirror `--ethereal-pearl-blue`. */
+  chartStroke: "#7aaab8",
+  /** Sun-event glyph outlines — mirror `--ethereal-aurora`. */
+  chartGlyphStroke: "#7ab8a8",
 
   hunterGreen: "#2F5D40",
   celadon: "#94C597",

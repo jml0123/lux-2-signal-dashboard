@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  isReadingsQueryRangeFullyBeforeToday,
+} from "@/app/lib/readings/dateUtils";
 import { getReadingsBucketed } from "@/app/lib/readings/data/readings";
+import { getObserverTimezone } from "@/app/lib/readings/sunChartBounds";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -29,7 +33,14 @@ export async function GET(req: Request) {
       end,
       sensor: sensor.trim() ? sensor : undefined,
     });
-    return NextResponse.json({ rows });
+    const headers = new Headers();
+    if (isReadingsQueryRangeFullyBeforeToday(end, getObserverTimezone())) {
+      headers.set(
+        "Cache-Control",
+        "public, max-age=31536000, s-maxage=31536000, immutable",
+      );
+    }
+    return NextResponse.json({ rows }, { headers });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

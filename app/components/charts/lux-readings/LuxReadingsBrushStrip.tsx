@@ -98,7 +98,7 @@ export function LuxReadingsBrushStrip({
             y={(d) => Number(brushYScale(d.lux))}
             yScale={brushYScale}
             curve={luxLineCurve}
-            fill="var(--palette-celadon)"
+            fill="var(--chart-brush-overview-fill)"
             fillOpacity={luxBrushAreaFillOpacity}
             style={{ pointerEvents: "none" }}
           />

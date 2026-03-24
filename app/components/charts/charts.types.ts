@@ -37,6 +37,8 @@ export type LuxReadingsSingleChartInnerProps = {
   dual?: { sensorA: string; sensorB: string; points: LuxDualPoint[] };
   yDomain?: [number, number];
   sunMarkers?: ChartSunMarkersIso | null;
+  /** Main-plot scrub: wall time under cursor (ms); `null` when pointer leaves plot or exits inner bounds (neutral page bg). */
+  onAmbientScrubTime?: (timeMs: number | null) => void;
 };
 
 export type LuxReadingsSingleChartProps = {
@@ -51,6 +53,7 @@ export type LuxReadingsSingleChartProps = {
   sunMarkers?: ChartSunMarkersIso | null;
   yDomain?: [number, number];
   className?: string;
+  onAmbientScrubTime?: (timeMs: number | null) => void;
 };
 
 export type LuxSunGlyphPointerPayload = {

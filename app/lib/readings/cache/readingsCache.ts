@@ -1,3 +1,4 @@
+import { isCompleteHistoricalReadingsDay } from "../dateUtils";
 import type { ReadingBucketedRow } from "../readings.types";
 
 const STORAGE_PREFIX = "lux:readings:v1:";
@@ -40,11 +41,14 @@ function parsePayload(raw: string | null): CachedPayload | null {
 
 export function readReadingsFromCache(
   key: string,
+  chartDate: string,
+  observerTimezone?: string,
 ): ReadingBucketedRow[] | null {
   if (typeof window === "undefined") return null;
   const payload = parsePayload(localStorage.getItem(key));
   if (!payload) return null;
-  if (Date.now() - payload.fetchedAt > TTL_MS) {
+  const immutable = isCompleteHistoricalReadingsDay(chartDate, observerTimezone);
+  if (!immutable && Date.now() - payload.fetchedAt > TTL_MS) {
     localStorage.removeItem(key);
     return null;
   }

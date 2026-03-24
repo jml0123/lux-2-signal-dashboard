@@ -1,9 +1,8 @@
 import { ReadingsDashboard } from "@/app/components/readings/ReadingsDashboard";
 import { ReadingsDashboardHeader } from "@/app/components/readings/ReadingsDashboardHeader";
 import {
-  defaultDashboardDateString,
+  clampReadingsDateParam,
   getUtcDayChartInclusiveBounds,
-  isValidUtcDateParam,
 } from "@/app/lib/readings/dateUtils";
 import {
   getChartSunMarkersIso,
@@ -28,9 +27,7 @@ export default async function Home({
 }) {
   const sp = (await searchParams) ?? {};
   const dateRaw = firstParam(sp.date);
-  const date = isValidUtcDateParam(dateRaw)
-    ? dateRaw
-    : defaultDashboardDateString();
+  const date = clampReadingsDateParam(dateRaw);
   const sensor = firstParam(sp.sensor);
 
   const coords = parseObserverCoords();
@@ -43,7 +40,7 @@ export default async function Home({
 
   return (
     <div className="min-h-full flex-1 bg-[var(--app-page-bg)]">
-      <div className="mx-auto flex w-full max-w-[min(100vw-10px,90rem)] flex-col gap-8 px-2 py-10 sm:px-3">
+      <div className="relative mx-auto flex w-full max-w-[min(100vw-10px,90rem)] flex-col gap-8 px-2 py-10 sm:px-3">
         <ReadingsDashboardHeader />
         <ReadingsDashboard
           chartStartIso={chartBounds.start.toISOString()}

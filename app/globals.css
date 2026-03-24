@@ -4,11 +4,13 @@
 @import "primereact/resources/primereact.min.css";
 
 /*
- * `data-theme` on <html>: "light" | "dark" (set by ThemeToggle + inline script).
+ * `data-theme` on <html>: "light" | "dark" (prefers-color-scheme + SystemThemeSync).
  * Brand + chart tokens stay the same in both themes (lux greens unchanged).
  * App chrome (page, cards, text, inputs) uses --app-* per theme.
  */
 html {
+  /* Default until `data-theme` is set (beforeInteractive script). */
+  --readings-header-title-color: #0a0a0a;
   /* Brand library — keep in sync with `dashboardTheme.brandPalette` */
   --brand-deep-forest: #094630;
   --brand-sea-green: #058b64;
@@ -22,9 +24,23 @@ html {
   --palette-deep-teal: #497359;
   --palette-evergreen: #072414;
 
+  /* Ethereal — light signal palette (charts / accents) */
+  --ethereal-dusk-violet: #8b7ab8;
+  --ethereal-dawn-lavender: #a896cc;
+  --ethereal-pearl-blue: #7aaab8;
+  --ethereal-mist-sage: #8ab89e;
+  --ethereal-golden-haze: #c4a862;
+  --ethereal-rose-dusk: #c47a8a;
+  --ethereal-sky-slate: #8aaabb;
+  --ethereal-aurora: #7ab8a8;
+
   /* Shared chart chrome (tooltip); axis/ticks/grid/lines are theme-specific below. */
-  --chart-tooltip-bg: rgba(7, 36, 20, 0.92);
-  --chart-tooltip-fg: #f4faf4;
+  --chart-tooltip-bg: color-mix(
+    in srgb,
+    var(--ethereal-dusk-violet) 18%,
+    rgba(12, 14, 22, 0.94)
+  );
+  --chart-tooltip-fg: #f4f6fb;
 }
 
 html[data-theme="light"] {
@@ -36,28 +52,45 @@ html[data-theme="light"] {
   --app-text: #072414;
   --app-text-muted: #2f5d40;
   --app-text-subtle: #497359;
-  --chart-plot-bg: var(--app-page-bg);
-  --chart-grid: rgba(47, 93, 64, 0.14);
-  --chart-sun-line: color-mix(in srgb, var(--brand-pine-teal) 42%, transparent);
-  --chart-axis: var(--brand-pine-teal);
-  --chart-tick: var(--brand-deep-forest);
-  --chart-line: var(--brand-pine-teal);
-  --chart-brush-pattern-stroke: var(--brand-pine-teal);
-  --chart-brush-selection-stroke: var(--brand-pine-teal);
-  --chart-area: rgba(47, 93, 64, 0.22);
-  --chart-area-overview: rgba(47, 93, 64, 0.2);
-  --app-brush-holder-fill: var(--app-page-bg);
-  --app-brush-holder-border: transparent;
+  /* Transparent so ambient scrub gradient shows through the chart. */
+  --chart-plot-bg: transparent;
+  --chart-grid: color-mix(in srgb, var(--ethereal-sky-slate) 28%, transparent);
+  --chart-sun-line: color-mix(in srgb, var(--ethereal-pearl-blue) 38%, transparent);
+  --chart-axis: var(--ethereal-dusk-violet);
+  --chart-tick: color-mix(in srgb, var(--ethereal-dusk-violet) 88%, #0a0a12 12%);
+  --chart-line: var(--ethereal-dusk-violet);
+  /* Second sensor (dashed) — distinct from primary stroke. */
+  --chart-line-secondary: var(--ethereal-rose-dusk);
+  --chart-brush-pattern-stroke: var(--ethereal-pearl-blue);
+  --chart-brush-selection-stroke: var(--ethereal-aurora);
+  --chart-area: color-mix(in srgb, var(--ethereal-aurora) 24%, transparent);
+  --chart-area-overview: color-mix(in srgb, var(--ethereal-mist-sage) 22%, transparent);
+  --chart-brush-overview-fill: color-mix(
+    in srgb,
+    var(--ethereal-aurora) 55%,
+    var(--ethereal-pearl-blue)
+  );
+  /* @visx/threshold: band between sensor A (y0) and B (y1); swaps at line crosses. */
+  --chart-dual-threshold-below: color-mix(in srgb, var(--chart-line-secondary) 52%, transparent);
+  --chart-dual-threshold-above: color-mix(in srgb, var(--chart-line) 52%, transparent);
+  /* Narrow band when both agree (see `DUAL_SENSOR_OVERLAP_MAX_LUX`). */
+  --chart-dual-overlap-fill: color-mix(in srgb, var(--ethereal-golden-haze) 58%, transparent);
+  --app-brush-holder-fill: transparent;
+  --app-brush-holder-border: var(--app-card-border);
+  /* Softens ambient scrub gradient so text stays readable (layered over gradient in JS). */
+  --ambient-scrub-wash: rgba(255, 255, 255, 0.74);
   --app-field-surface: #ffffff;
   --background: var(--app-page-bg);
   --foreground: var(--app-text);
-  /* Chart masthead: bold but low-contrast, pulled toward page bg */
-  --chart-title-date: color-mix(in srgb, var(--app-text-muted) 78%, var(--app-page-bg) 22%);
+  /* Chart masthead: same palette, pulled toward body text for contrast (not flat black). */
+  --chart-title-date: color-mix(in srgb, var(--ethereal-dusk-violet) 58%, var(--app-text) 42%);
   --chart-title-weekday: color-mix(
     in srgb,
-    var(--app-text-subtle) 72%,
-    var(--app-page-bg) 28%
+    var(--ethereal-sky-slate) 50%,
+    var(--app-text) 50%
   );
+  /* Dashboard page title (Metal); near-black on light page bg. */
+  --readings-header-title-color: #0a0a0a;
 }
 
 html[data-theme="dark"] {
@@ -69,27 +102,45 @@ html[data-theme="dark"] {
   --app-text: #e8ebe8;
   --app-text-muted: #b8c9be;
   --app-text-subtle: #8fa896;
-  --chart-plot-bg: var(--app-page-bg);
-  --chart-grid: rgba(232, 235, 232, 0.14);
-  --chart-sun-line: color-mix(in srgb, var(--brand-seaweed) 50%, transparent);
-  --chart-axis: var(--brand-seaweed);
-  --chart-tick: var(--app-text);
-  --chart-line: var(--brand-seaweed);
-  --chart-brush-pattern-stroke: var(--brand-seaweed);
-  --chart-brush-selection-stroke: var(--brand-sea-green);
-  --chart-area: rgba(55, 172, 131, 0.2);
-  --chart-area-overview: rgba(55, 172, 131, 0.18);
-  --app-brush-holder-fill: var(--app-page-bg);
-  --app-brush-holder-border: transparent;
+  --chart-plot-bg: transparent;
+  --chart-grid: color-mix(in srgb, var(--ethereal-sky-slate) 32%, transparent);
+  --chart-sun-line: color-mix(in srgb, var(--ethereal-dawn-lavender) 42%, transparent);
+  --chart-axis: var(--ethereal-mist-sage);
+  --chart-tick: color-mix(in srgb, var(--ethereal-dawn-lavender) 82%, #f8f9fb 18%);
+  --chart-line: var(--ethereal-dawn-lavender);
+  --chart-line-secondary: var(--ethereal-aurora);
+  --chart-brush-pattern-stroke: var(--ethereal-pearl-blue);
+  --chart-brush-selection-stroke: var(--ethereal-aurora);
+  --chart-area: color-mix(in srgb, var(--ethereal-aurora) 26%, transparent);
+  --chart-area-overview: color-mix(in srgb, var(--ethereal-pearl-blue) 22%, transparent);
+  --chart-brush-overview-fill: color-mix(
+    in srgb,
+    var(--ethereal-pearl-blue) 48%,
+    var(--ethereal-dusk-violet)
+  );
+  /*
+   * Dual threshold fills: avoid color-mix + transparent here (often reads as opaque near-black on
+   * dark UI). Explicit rgba so bands match light-mode behavior on `--app-page-bg`.
+   * Mirrors `--chart-line` (dawn lavender) vs `--chart-line-secondary` (aurora).
+   */
+  --chart-dual-threshold-above: rgba(168, 150, 204, 0.48);
+  --chart-dual-threshold-below: rgba(122, 184, 168, 0.48);
+  --chart-dual-overlap-fill: rgba(196, 168, 98, 0.5);
+  --app-brush-holder-fill: transparent;
+  --app-brush-holder-border: var(--app-card-border);
+  /* Match light: explicit alpha so the gradient layer stays visible (color-mix + transparent often goes fully opaque). */
+  --ambient-scrub-wash: rgba(51, 56, 51, 0.74);
   --app-field-surface: #343a36;
   --background: var(--app-page-bg);
   --foreground: var(--app-text);
-  --chart-title-date: color-mix(in srgb, var(--app-text-muted) 62%, var(--app-page-bg) 38%);
+  /* Brighter mix toward primary text; keeps lavender / pearl in the hue. */
+  --chart-title-date: color-mix(in srgb, var(--ethereal-dawn-lavender) 44%, var(--app-text) 56%);
   --chart-title-weekday: color-mix(
     in srgb,
-    var(--app-text-subtle) 58%,
-    var(--app-page-bg) 42%
+    var(--ethereal-pearl-blue) 36%,
+    var(--app-text) 64%
   );
+  --readings-header-title-color: #fafafa;
 }
 
 @theme inline {

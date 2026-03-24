@@ -10,6 +10,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import {
+  latestCalendarDateAnywhere,
+  localCalendarDateFromIsoParam,
+} from "@/app/lib/readings/dateUtils";
+import { READINGS_DATA_EPOCH_DATE } from "@/app/lib/readings/readings.constants";
 import { buildReadingsQueryPath } from "@/app/lib/readings/readingsQueryPath";
 
 export type ReadingsQueryControlsProps = {
@@ -22,12 +27,6 @@ export type ReadingsQueryControlsProps = {
 export type ReadingsQueryControlsHandle = {
   openDatePicker: () => void;
 };
-
-function toDateValue(dateStr: string): Date | null {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
 
 function toDateParam(dateValue: Date): string {
   const y = dateValue.getFullYear();
@@ -46,7 +45,16 @@ export const ReadingsQueryControls = forwardRef<
   const router = useRouter();
   const [date, setDate] = useState(defaultDate);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const calendarValue = useMemo(() => toDateValue(date), [date]);
+  const calendarValue = useMemo(
+    () => localCalendarDateFromIsoParam(date),
+    [date],
+  );
+  const calendarMinDate = localCalendarDateFromIsoParam(
+    READINGS_DATA_EPOCH_DATE,
+  );
+  const calendarMaxDate = localCalendarDateFromIsoParam(
+    latestCalendarDateAnywhere(),
+  );
 
   useImperativeHandle(
     ref,
@@ -84,6 +92,8 @@ export const ReadingsQueryControls = forwardRef<
         >
           <Calendar
             value={calendarValue}
+            minDate={calendarMinDate ?? undefined}
+            maxDate={calendarMaxDate ?? undefined}
             inline
             showWeek
             onChange={(e) => {

@@ -1,12 +1,13 @@
 "use client";
 
-import { curveNatural } from "@visx/curve";
+import { curveNatural, curveStepAfter } from "@visx/curve";
 import { localPoint } from "@visx/event";
 import { Group } from "@visx/group";
 import { PatternLines } from "@visx/pattern";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear, scaleUtc } from "@visx/scale";
-import { Area, AreaClosed, LinePath } from "@visx/shape";
+import { AreaClosed, LinePath } from "@visx/shape";
+import { Threshold } from "@visx/threshold";
 import type BaseBrush from "@visx/brush/lib/BaseBrush";
 import type { Bounds } from "@visx/brush/lib/types";
 import { defaultStyles, Tooltip, useTooltip } from "@visx/tooltip";
@@ -24,7 +25,12 @@ import {
   nearestDualPoint,
   nearestLuxPoint,
 } from "@/app/lib/readings/chartPointerUtils";
-import { luxAreaGradientStopSpecs } from "@/app/lib/readings/readings.constants";
+import {
+  DUAL_SENSOR_OVERLAP_MAX_LUX,
+  LUX_CHART_AREA_FILL_OPACITY,
+  LUX_CHART_BRUSH_AREA_FILL_OPACITY,
+  luxAreaGradientStopSpecs,
+} from "@/app/lib/readings/readings.constants";
 import type { LuxChartPoint, LuxDualPoint } from "@/app/lib/readings/readings.types";
 import { dashboardTheme } from "@/app/lib/theme/dashboardTheme";
 import { LuxReadingsChartTooltipContent } from "./LuxReadingsChartTooltip";
@@ -47,11 +53,19 @@ const brushHolderPadding = { top: 14, bottom: 16, left: 16, right: 16 };
 const overviewInnerHeight = 52;
 /** Main plot total height (includes `margin` top/bottom). */
 const plotHeight = 380;
-/** Natural cubic spline — passes through points with long, smooth arcs between buckets. */
-const luxLineCurve = curveNatural;
-/** Area fill: low opacity so the gradient fades into `--chart-plot-bg`. */
-const luxAreaFillOpacity = 0.12;
-const luxBrushAreaFillOpacity = 0.19;
+/**
+ * When true, draw piecewise-constant segments (step-after / right-continuous): each bucket’s
+ * lux is flat from its timestamp until the next sample — matches 1-minute RPC buckets.
+ * When false, use a smooth spline between bucket centers.
+ */
+const LUX_READINGS_CHART_CURVE_STEPPED = true;
+
+const luxLineCurve = LUX_READINGS_CHART_CURVE_STEPPED
+  ? curveStepAfter
+  : curveNatural;
+/** Area fill opacities from `readings.constants` (higher contrast on transparent plot). */
+const luxAreaFillOpacity = LUX_CHART_AREA_FILL_OPACITY;
+const luxBrushAreaFillOpacity = LUX_CHART_BRUSH_AREA_FILL_OPACITY;
 /** SVG text: align with global `font-sans` (Noto Sans). */
 const chartSansFontFamily =
   "var(--font-sans), ui-sans-serif, system-ui, sans-serif";
@@ -71,6 +85,7 @@ function LuxReadingsSingleChartInner({
   dual,
   yDomain = defaultYDomain,
   sunMarkers = null,
+  onAmbientScrubTime,
 }: LuxReadingsSingleChartInnerProps) {
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = plotHeight - margin.top - margin.bottom;
@@ -181,6 +196,34 @@ function LuxReadingsSingleChartInner({
     () => luxAreaGradientStopSpecs(yScale, innerHeight),
     [yScale, innerHeight],
   );
+
+  /** Step-aligned horizontal slices where both sensors agree within `DUAL_SENSOR_OVERLAP_MAX_LUX`. */
+  const dualOverlapSegments = useMemo(() => {
+    if (!dual?.points || dual.points.length < 2) return [];
+    const pts = dual.points;
+    const out: { key: string; x: number; y: number; w: number; h: number }[] =
+      [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p = pts[i]!;
+      if (Math.abs(p.luxA - p.luxB) > DUAL_SENSOR_OVERLAP_MAX_LUX) continue;
+      const x0 = xScale(new Date(p.time)) ?? 0;
+      const x1 = xScale(new Date(pts[i + 1]!.time)) ?? 0;
+      if (!(x1 > x0)) continue;
+      const yHi = yScale(Math.max(p.luxA, p.luxB));
+      const yLo = yScale(Math.min(p.luxA, p.luxB));
+      const y = Math.min(yHi, yLo);
+      const h = Math.max(Math.abs(yLo - yHi), 3);
+      out.push({
+        key: `dual-ov-${p.time}-${i}`,
+        x: x0,
+        y,
+        w: x1 - x0,
+        h,
+      });
+    }
+    return out;
+  }, [dual, xScale, yScale]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [curveSpotlights, setCurveSpotlights] = useState<CurveSpotlights>(null);
 
@@ -243,15 +286,22 @@ function LuxReadingsSingleChartInner({
         pt.y > innerHeight
       ) {
         setCurveSpotlights(null);
+        onAmbientScrubTime?.(null);
         return;
       }
 
-      const t = xScale.invert(pt.x).getTime();
+      const tRaw = xScale.invert(pt.x).getTime();
+      const tClamped = Math.min(
+        Math.max(tRaw, dayStart.getTime()),
+        dayEnd.getTime(),
+      );
+      onAmbientScrubTime?.(tClamped);
+
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
 
       if ((dual?.points?.length ?? 0) >= 2) {
-        const hit = nearestDualPoint(dual!.points, t);
+        const hit = nearestDualPoint(dual!.points, tRaw);
         if (!hit) {
           setCurveSpotlights(null);
           return;
@@ -266,7 +316,7 @@ function LuxReadingsSingleChartInner({
           tooltipData: { kind: "dual", point: hit },
         });
       } else if (points.length >= 2) {
-        const hit = nearestLuxPoint(points, t);
+        const hit = nearestLuxPoint(points, tRaw);
         if (!hit) {
           setCurveSpotlights(null);
           return;
@@ -283,13 +333,25 @@ function LuxReadingsSingleChartInner({
         setCurveSpotlights(null);
       }
     },
-    [dual, points, xScale, yScale, showTooltip, innerWidth, innerHeight],
+    [
+      dual,
+      points,
+      xScale,
+      yScale,
+      showTooltip,
+      innerWidth,
+      innerHeight,
+      dayStart,
+      dayEnd,
+      onAmbientScrubTime,
+    ],
   );
 
   const onPlotPointerLeave = useCallback(() => {
     setCurveSpotlights(null);
     hideTooltip();
-  }, [hideTooltip]);
+    onAmbientScrubTime?.(null);
+  }, [hideTooltip, onAmbientScrubTime]);
 
   const onSunPointerEnter = useCallback(
     (payload: {
@@ -361,7 +423,7 @@ function LuxReadingsSingleChartInner({
             stroke={dashboardTheme.chartStroke}
             strokeWidth={1}
             orientation={["diagonal"]}
-            background="rgba(148, 197, 151, 0.22)"
+            background="rgba(138, 184, 158, 0.22)"
           />
         </defs>
         <Group left={margin.left} top={margin.top}>
@@ -405,22 +467,48 @@ function LuxReadingsSingleChartInner({
           ))}
           {showDual ? (
             <>
-              <Area<LuxDualPoint>
+              {/*
+                Same pattern as visx threshold demo: y0 / y1 are the two series (not min/max);
+                clip splits the band so fills swap automatically when lines cross.
+                @see https://airbnb.io/visx/threshold
+              */}
+              <Threshold<LuxDualPoint>
+                id={`lux-dual-${chartUid}`}
                 data={dual!.points}
                 x={(d) => xScale(new Date(d.time)) ?? 0}
-                y0={(d) => yScale(Math.min(d.luxA, d.luxB))}
-                y1={(d) => yScale(Math.max(d.luxA, d.luxB))}
+                y0={(d) => yScale(d.luxA) ?? 0}
+                y1={(d) => yScale(d.luxB) ?? 0}
+                clipAboveTo={0}
+                clipBelowTo={innerHeight}
                 curve={luxLineCurve}
-                fill={`url(#${luxAreaGradientId})`}
-                fillOpacity={luxAreaFillOpacity}
+                belowAreaProps={{
+                  fill: "var(--chart-dual-threshold-below)",
+                  fillOpacity: luxAreaFillOpacity,
+                }}
+                aboveAreaProps={{
+                  fill: "var(--chart-dual-threshold-above)",
+                  fillOpacity: luxAreaFillOpacity,
+                }}
               />
+              <g style={{ pointerEvents: "none" }} aria-hidden>
+                {dualOverlapSegments.map((s) => (
+                  <rect
+                    key={s.key}
+                    x={s.x}
+                    y={s.y}
+                    width={s.w}
+                    height={s.h}
+                    fill="var(--chart-dual-overlap-fill)"
+                  />
+                ))}
+              </g>
               <LinePath<LuxDualPoint>
                 data={dual!.points}
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.luxA)}
                 curve={luxLineCurve}
                 stroke="var(--chart-line)"
-                strokeWidth={1.75}
+                strokeWidth={2}
                 fill="none"
               />
               <LinePath<LuxDualPoint>
@@ -428,8 +516,8 @@ function LuxReadingsSingleChartInner({
                 x={(d) => xScale(new Date(d.time)) ?? 0}
                 y={(d) => yScale(d.luxB)}
                 curve={luxLineCurve}
-                stroke="var(--chart-line)"
-                strokeWidth={1.75}
+                stroke="var(--chart-line-secondary)"
+                strokeWidth={2}
                 strokeDasharray="6 4"
                 fill="none"
               />
@@ -453,7 +541,7 @@ function LuxReadingsSingleChartInner({
                 y={(d) => yScale(d.lux) ?? 0}
                 curve={luxLineCurve}
                 stroke="var(--chart-line)"
-                strokeWidth={1.75}
+                strokeWidth={2}
                 fill="none"
               />
             </>
@@ -634,6 +722,7 @@ export function LuxReadingsSingleChart({
   sunMarkers = null,
   yDomain,
   className,
+  onAmbientScrubTime,
 }: LuxReadingsSingleChartProps) {
   const dayStart = useMemo(() => new Date(dayStartIso), [dayStartIso]);
   const dayEnd = useMemo(() => new Date(dayEndIso), [dayEndIso]);
@@ -651,6 +740,7 @@ export function LuxReadingsSingleChart({
               dual={dual}
               yDomain={yDomain}
               sunMarkers={sunMarkers}
+              onAmbientScrubTime={onAmbientScrubTime}
             />
           )
         }
@@ -664,7 +754,7 @@ export function LuxReadingsSingleChart({
           <div className="text-sm leading-tight">
             <h2 className="flex flex-wrap items-center justify-end gap-x-2">
               <span
-                className="font-normal tracking-tight"
+                className="font-semibold tracking-tight"
                 style={{ color: "var(--chart-title-date)" }}
               >
                 {chartDayTitle.dateLine}
@@ -674,7 +764,6 @@ export function LuxReadingsSingleChart({
                   className="font-bold tracking-tight"
                   style={{
                     color: "var(--chart-title-weekday)",
-                    opacity: 0.88,
                   }}
                 >
                   {chartDayTitle.weekdayLine}

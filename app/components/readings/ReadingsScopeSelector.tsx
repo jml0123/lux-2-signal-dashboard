@@ -4,20 +4,20 @@ export function ReadingsScopeSelector() {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className="flex w-fit flex-wrap rounded-none border p-0"
+        className="font-display flex w-fit flex-wrap gap-px rounded-md border p-0.5 shadow-sm"
         style={{
           borderColor: "var(--app-card-border)",
-          background: "var(--app-field-surface)",
+          background: "var(--app-card-surface)",
         }}
         role="group"
         aria-label="Readings scope"
       >
         <button
           type="button"
-          className="rounded-none px-2 py-0.5 text-xs font-medium leading-tight transition-colors"
+          className="rounded-sm px-2 py-1 text-xs font-semibold leading-tight transition-colors"
           style={{
             background: "var(--app-page-bg-accent)",
-            color: "var(--app-text)",
+            color: "var(--chart-title-date)",
           }}
           aria-pressed="true"
         >
@@ -26,7 +26,7 @@ export function ReadingsScopeSelector() {
         <button
           type="button"
           disabled
-          className="rounded-none px-2 py-0.5 text-xs font-medium leading-tight"
+          className="rounded-sm px-2 py-1 text-xs font-normal leading-tight"
           style={{
             color: "var(--app-text-subtle)",
             cursor: "not-allowed",
