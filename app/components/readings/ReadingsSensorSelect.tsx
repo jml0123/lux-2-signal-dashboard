@@ -11,7 +11,7 @@ import {
   readSensorsFromCache,
   writeSensorsToCache,
 } from "@/app/lib/readings/cache/sensorsCache";
-import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
+import { ReadingsControlChevronIcon } from "@/app/components/readings/ReadingsControlChevronIcon";
 import { buildReadingsQueryPath } from "@/app/lib/readings/readingsQueryPath";
 
 export type ReadingsSensorSelectProps = {
@@ -19,25 +19,6 @@ export type ReadingsSensorSelectProps = {
   defaultSensor: string;
   className?: string;
 };
-
-const chevronDown = (
-  <svg
-    className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70"
-    width="11"
-    height="11"
-    viewBox="0 0 12 12"
-    aria-hidden
-  >
-    <path
-      d="M2.5 4.25L6 7.75L9.5 4.25"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={READINGS_STROKE_WIDTHS.controlChevron}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 export function ReadingsSensorSelect({
   defaultDate,
@@ -133,7 +114,7 @@ export function ReadingsSensorSelect({
           style={{ color: "var(--chart-title-date)" }}
         >
           {label}
-          {chevronDown}
+          <ReadingsControlChevronIcon className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70" />
         </button>
       </div>
 

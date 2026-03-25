@@ -14,11 +14,11 @@ import {
   readingsCacheKey,
   writeReadingsToCache,
 } from "@/app/lib/readings/cache/readingsCache";
+import { ReadingsControlChevronIcon } from "@/app/components/readings/ReadingsControlChevronIcon";
 import { ReadingsScopeSelector } from "@/app/components/readings/ReadingsScopeSelector";
 import { ReadingsSensorSelect } from "@/app/components/readings/ReadingsSensorSelect";
 import { formatChartDayTitleParts } from "@/app/lib/readings/dateUtils";
 import { buildAmbientTimeKnots } from "@/app/lib/readings/ambientLightScrub";
-import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
 import { useAnimatedAmbientScrubGradient } from "@/app/lib/readings/useAnimatedAmbientScrubGradient";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
 import type {
@@ -162,7 +162,7 @@ export function ReadingsDashboard({
           One bucket loaded; at least two are needed to draw the series.
         </p>
       ) : null}
-      <div className="flex flex-col gap-2 px-1 pt-4 pb-0 sm:px-2">
+      <div className="relative z-0 flex flex-col gap-2 px-1 pt-4 pb-0 sm:px-2">
         <ReadingsSensorSelect
           defaultDate={date}
           defaultSensor={sensor}
@@ -180,53 +180,40 @@ export function ReadingsDashboard({
           onAmbientScrubTime={onAmbientScrubTime}
           emptyPlotMessage={
             !loading && pointCount === 0
-              ? "No data has been collected for this day yet (it might be the future). Check back again later!"
+              ? "No data has been collected for this day yet (the sun has not yet risen yet... or it may be the future). Check back again later!"
               : null
           }
         />
       </div>
-      <div className="-mt-6 flex justify-end px-1 sm:px-2">
+      <div className="relative z-10 -mt-6 flex justify-end px-1 sm:px-2">
         <div className="flex flex-col items-end gap-2">
           {chartDayTitle ? (
             <div className="text-right text-sm leading-tight">
-            <h2 className="lux-masthead-datetime flex flex-wrap items-center justify-end gap-x-2">
-              <span className="tracking-tight">
-                <button
-                  type="button"
-                  onClick={() => queryControlsRef.current?.openDatePicker()}
-                  className="group inline-flex cursor-pointer items-center gap-0.5 font-semibold underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current"
+            <h2 className="lux-masthead-datetime w-full">
+              <button
+                type="button"
+                onClick={() => queryControlsRef.current?.openDatePicker()}
+                aria-label="Open date picker"
+                className="group flex w-full cursor-pointer flex-wrap items-center justify-end gap-x-2 border-0 bg-transparent p-0 font-[inherit]"
+              >
+                <span
+                  className="inline-flex items-center gap-0.5 font-semibold tracking-tight underline decoration-transparent underline-offset-2 transition-colors group-hover:decoration-current"
                   style={{ color: "var(--chart-title-date)" }}
-                  aria-label="Open date picker"
                 >
                   {chartDayTitle.dateLine}
-                  <svg
-                    className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70"
-                    width="11"
-                    height="11"
-                    viewBox="0 0 12 12"
-                    aria-hidden
-                  >
-                    <path
-                      d="M2.5 4.25L6 7.75L9.5 4.25"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={READINGS_STROKE_WIDTHS.controlChevron}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              </span>
-              {chartDayTitle.weekdayLine ? (
-                <span
-                  className="font-bold tracking-tight"
-                  style={{
-                    color: "var(--chart-title-weekday)",
-                  }}
-                >
-                  {chartDayTitle.weekdayLine}
+                  <ReadingsControlChevronIcon className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70" />
                 </span>
-              ) : null}
+                {chartDayTitle.weekdayLine ? (
+                  <span
+                    className="font-bold tracking-tight"
+                    style={{
+                      color: "var(--chart-title-weekday)",
+                    }}
+                  >
+                    {chartDayTitle.weekdayLine}
+                  </span>
+                ) : null}
+              </button>
             </h2>
             {observerLocationLabel ? (
               <div

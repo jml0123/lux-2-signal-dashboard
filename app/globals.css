@@ -107,10 +107,11 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --app-page-bg: #333833;
-  --app-page-bg-accent: #3d4440;
-  --app-card-surface: #3a403c;
-  --app-card-border: rgba(232, 235, 232, 0.14);
+  /* Ethereal dark maroon — deep wine/plum ink (was green-gray #333833). */
+  --app-page-bg: #1f141b;
+  --app-page-bg-accent: #2a1d25;
+  --app-card-surface: #32252f;
+  --app-card-border: rgba(232, 214, 222, 0.12);
   --app-text: #e8ebe8;
   --app-text-muted: #b8c9be;
   --app-text-subtle: #8fa896;
@@ -142,8 +143,8 @@ html[data-theme="dark"] {
   --app-brush-holder-fill: transparent;
   --app-brush-holder-border: var(--app-card-border);
   /* Match light: explicit alpha so the gradient layer stays visible (color-mix + transparent often goes fully opaque). */
-  --ambient-scrub-wash: rgba(51, 56, 51, 0.74);
-  --app-field-surface: #343a36;
+  --ambient-scrub-wash: rgba(31, 20, 27, 0.74);
+  --app-field-surface: #2c2129;
   --background: var(--app-page-bg);
   --foreground: var(--app-text);
   --chart-title-date: color-mix(in srgb, var(--ethereal-dawn-lavender) 86%, #050508 14%);
@@ -156,9 +157,9 @@ html[data-theme="dark"] {
   );
   --chart-tooltip-fg: var(--app-text-subtle);
   --chart-tooltip-border: var(--app-card-border);
-  /* Flipped: light chip + ethereal ink (matches chart title mixes; readable on `#ecece8`). */
+  /* Flipped: light chip + dark ink (title mixes stay too light on `#ecece8`). */
   --chart-empty-plot-chip-bg: #ecece8;
-  --chart-empty-plot-chip-fg: var(--chart-title-weekday);
+  --chart-empty-plot-chip-fg: var(--palette-evergreen);
 }
 
 @theme inline {
