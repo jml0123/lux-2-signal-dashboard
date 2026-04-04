@@ -24,6 +24,8 @@ import type { ReadingBucketedDatesRow } from "@/app/lib/readings/readings.types"
 export type ReadingsMultiDayDashboardProps = {
   endWeek: string | null;
   sensor: string;
+  /** Day-view `date` preserved in the multiday URL; used when switching back to Day. */
+  dayReturn?: string | null;
   observerTimezone?: string;
 };
 
@@ -42,6 +44,7 @@ function concatRowsForDates(
 export function ReadingsMultiDayDashboard({
   endWeek,
   sensor,
+  dayReturn,
   observerTimezone,
 }: ReadingsMultiDayDashboardProps) {
   const [byDay, setByDay] = useState<Map<string, ReadingBucketedDatesRow[]>>(
@@ -168,9 +171,11 @@ export function ReadingsMultiDayDashboard({
         <div className="flex justify-center">
           <ReadingsScopeSelector
             anchorDate={
-              datesNeeded.length > 0
-                ? datesNeeded[datesNeeded.length - 1]!
-                : multiWindowLatestUtcDate()
+              dayReturn?.trim()
+                ? dayReturn.trim()
+                : datesNeeded.length > 0
+                  ? datesNeeded[datesNeeded.length - 1]!
+                  : multiWindowLatestUtcDate()
             }
             sensor={sensor}
             activeScope="multi"
@@ -178,11 +183,6 @@ export function ReadingsMultiDayDashboard({
         </div>
         {loadError ? (
           <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
-        ) : null}
-        {loading && datesNeeded.length > 0 ? (
-          <p className="text-sm" style={{ color: "var(--app-text-subtle)" }}>
-            Loading multi-day readings…
-          </p>
         ) : null}
         <div className="relative z-0 flex flex-col gap-3 px-1 pt-4 pb-0 sm:px-2">
           <LuxReadingsRidgelineChart
@@ -192,15 +192,21 @@ export function ReadingsMultiDayDashboard({
             emptyMessage={
               !endWeek
                 ? "No week window in range yet."
-                : !loading
-                  ? "No data in range yet, or not enough buckets to draw a line."
-                  : null
+                : loading && datesNeeded.length > 0
+                  ? "Loading multi-day readings…"
+                  : !loading
+                    ? "No data in range yet, or not enough buckets to draw a line."
+                    : null
             }
           />
         </div>
         <div className="relative z-10 -mt-6 flex justify-center px-1 sm:px-2">
           <div className="flex flex-col items-center gap-2">
-            <ReadingsMultiWeekForm currentEndWeek={endWeek} sensor={sensor} />
+            <ReadingsMultiWeekForm
+              currentEndWeek={endWeek}
+              sensor={sensor}
+              dayReturn={dayReturn}
+            />
           </div>
         </div>
       </div>

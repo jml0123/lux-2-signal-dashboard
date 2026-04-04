@@ -23,11 +23,13 @@ import { buildMultidayQueryPath } from "@/app/lib/readings/readingsQueryPath";
 export type ReadingsMultiWeekFormProps = {
   currentEndWeek: string | null;
   sensor: string;
+  dayReturn?: string | null;
 };
 
 export function ReadingsMultiWeekForm({
   currentEndWeek,
   sensor,
+  dayReturn,
 }: ReadingsMultiWeekFormProps) {
   const router = useRouter();
   const latest = multiWindowLatestUtcDate();
@@ -51,11 +53,13 @@ export function ReadingsMultiWeekForm({
   const pick = useCallback(
     (tok: string) => {
       if (!options.includes(tok)) return;
-      router.replace(buildMultidayQueryPath(sensor, tok));
+      router.replace(
+        buildMultidayQueryPath(sensor, tok, dayReturn?.trim() || undefined),
+      );
       setOpen(false);
       queueMicrotask(() => triggerRef.current?.focus());
     },
-    [options, router, sensor],
+    [dayReturn, options, router, sensor],
   );
 
   useEffect(() => {

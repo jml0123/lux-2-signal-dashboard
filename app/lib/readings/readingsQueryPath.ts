@@ -8,11 +8,19 @@ export function buildReadingsQueryPath(date: string, sensor: string) {
   return `/?${params.toString()}`;
 }
 
-/** `endWeek` is `YYYY-MM-wkK` (same token shape as month-week window). */
-export function buildMultidayQueryPath(sensor: string, endWeek?: string) {
+/**
+ * `endWeek` is `YYYY-MM-wkK`. Optional `dayDate` is the day-view `date` to restore when
+ * switching back from multi-day (same param name as on `/` for simplicity).
+ */
+export function buildMultidayQueryPath(
+  sensor: string,
+  endWeek?: string,
+  dayDate?: string,
+) {
   const params = new URLSearchParams();
   if (endWeek?.trim()) params.set("endWeek", endWeek.trim());
   if (sensor.trim()) params.set("sensor", sensor.trim());
+  if (dayDate?.trim()) params.set("date", dayDate.trim());
   const q = params.toString();
   return q ? `/multiday?${q}` : "/multiday";
 }
