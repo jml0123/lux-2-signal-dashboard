@@ -90,7 +90,9 @@ export function ReadingsSensorSelect({
   const onPick = useCallback(
     (nextSensor: string) => {
       setSensor(nextSensor);
-      router.replace(buildReadingsQueryPath(defaultDate, nextSensor));
+      router.replace(
+        buildReadingsQueryPath(defaultDate, nextSensor),
+      );
       setOpen(false);
     },
     [router, defaultDate],

@@ -9,7 +9,9 @@ function throwPostgrest(prefix: string, error: PostgrestError): never {
   throw new Error(bits.join(" | "));
 }
 import { getUtcDayBounds } from "../dateUtils";
+import { MULTI_DAY_BUCKET_STRIDE } from "../readings.constants";
 import type {
+  ReadingBucketedDatesRow,
   ReadingBucketedRow,
   ReadingDbDto,
   ReadingsBucketedParams,
@@ -54,6 +56,24 @@ export async function getReadingsBucketed(
     throwPostgrest("readings_bucketed RPC", error);
   }
   return (data ?? []) as ReadingBucketedRow[];
+}
+
+/**
+ * Multi-day path: `readings_bucketed_dates` with UTC calendar days and fixed stride.
+ * Empty `dates` skips the network call.
+ */
+export async function getReadingsBucketedDates(
+  dates: string[],
+): Promise<ReadingBucketedDatesRow[]> {
+  if (dates.length === 0) return [];
+  const { data, error } = await getSupabase().rpc("readings_bucketed_dates", {
+    p_dates: dates,
+    p_stride: MULTI_DAY_BUCKET_STRIDE,
+  });
+  if (error) {
+    throwPostgrest("readings_bucketed_dates RPC", error);
+  }
+  return (data ?? []) as ReadingBucketedDatesRow[];
 }
 
 /** Half-open range [start, end) on `timestamp`. Row cap comes from your Supabase API max rows. */

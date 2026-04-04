@@ -39,7 +39,11 @@ export const ReadingsQueryControls = forwardRef<
   ReadingsQueryControlsHandle,
   ReadingsQueryControlsProps
 >(function ReadingsQueryControls(
-  { defaultDate, defaultSensor, observerTimezone }: ReadingsQueryControlsProps,
+  {
+    defaultDate,
+    defaultSensor,
+    observerTimezone,
+  }: ReadingsQueryControlsProps,
   ref,
 ) {
   const router = useRouter();
