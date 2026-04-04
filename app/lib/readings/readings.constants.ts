@@ -1,6 +1,9 @@
 /** First UTC calendar day present in the lux readings dataset (`YYYY-MM-DD`). */
 export const READINGS_DATA_EPOCH_DATE = "2026-03-22";
 
+/** Postgres interval for `readings_bucketed_dates` (must match RPC). */
+export const MULTI_DAY_BUCKET_STRIDE = "10 minutes";
+
 /**
  * Lux bands for UI / chart styling. `color` is the hue at each band start for the area
  * gradient: **lower lux → deeper dusk**, **higher lux → airy gold/lilac** (brighter scene).

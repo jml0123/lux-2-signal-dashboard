@@ -147,7 +147,11 @@ export function ReadingsDashboard({
     <>
       <div className="relative z-[1]">
       <div className="flex justify-center">
-        <ReadingsScopeSelector />
+        <ReadingsScopeSelector
+          anchorDate={date}
+          sensor={sensor}
+          activeScope="day"
+        />
       </div>
       {loadError ? (
         <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>

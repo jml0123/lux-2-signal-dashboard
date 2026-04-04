@@ -56,6 +56,11 @@ export interface ReadingsBucketedParams {
   stride?: string;
 }
 
+/** One row from `readings_bucketed_dates` RPC (UTC calendar `day_date`). */
+export interface ReadingBucketedDatesRow extends ReadingBucketedRow {
+  day_date: string;
+}
+
 /*
 
 create table public.readings (
