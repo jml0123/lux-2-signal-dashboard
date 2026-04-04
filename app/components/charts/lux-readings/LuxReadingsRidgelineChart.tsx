@@ -7,7 +7,7 @@ import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
 import { scaleLinear, scaleUtc } from "@visx/scale";
 import { AreaClosed, LinePath } from "@visx/shape";
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useSyncExternalStore } from "react";
 import {
   bucketedRowsToDualLuxPoints,
   bucketedRowsToLuxChartPoints,
@@ -23,7 +23,28 @@ import {
 import { READINGS_STROKE_WIDTHS } from "@/app/lib/readings/readings.constants";
 import type { LuxChartPoint, ReadingBucketedDatesRow } from "@/app/lib/readings/readings.types";
 
-const margin = { top: 10, right: 10, bottom: 36, left: 124 };
+/** Desktop: room for left strip labels; mobile uses labels under axis instead. */
+const MARGIN_DESKTOP = { top: 10, right: 10, bottom: 36, left: 124 };
+const MARGIN_MOBILE = { top: 10, right: 12, bottom: 12, left: 12 };
+/** Space below each ridge for weekday ticks + centered week label (mobile). */
+const MOBILE_RIDGE_FOOTER = 45;
+/** Tailwind `sm` breakpoint — keep in sync with `max-sm` usage. */
+const MOBILE_MAX_WIDTH_PX = 639;
+
+function useIsRidgelineMobileLayout(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (typeof window === "undefined") return () => {};
+      const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`).matches,
+    () => false,
+  );
+}
 /** Drawable lux height per ridge (px). */
 const bandInnerH = 78;
 /** Vertical offset between strip baselines; larger ⇒ more space between weeks (less overlap). */
@@ -109,10 +130,14 @@ function LuxReadingsRidgelineChartInner({
   emptyMessage?: string | null;
   observerTimezone?: string;
 }) {
+  const isMobile = useIsRidgelineMobileLayout();
+  const margin = isMobile ? MARGIN_MOBILE : MARGIN_DESKTOP;
   const innerWidth = Math.max(0, width - margin.left - margin.right);
   const n = chunks.length;
-  const svgHeight =
-    margin.top + (n > 0 ? (n - 1) * ridgeStep + bandInnerH : 0) + margin.bottom;
+  const ridgePitch = isMobile ? bandInnerH + MOBILE_RIDGE_FOOTER : ridgeStep;
+  const svgHeight = isMobile
+    ? margin.top + (n > 0 ? n * ridgePitch : 0) + margin.bottom
+    : margin.top + (n > 0 ? (n - 1) * ridgeStep + bandInnerH : 0) + margin.bottom;
 
   const prepared = useMemo((): PreparedChunk[] => {
     return chunks.map((c) => {
@@ -264,7 +289,7 @@ function LuxReadingsRidgelineChartInner({
         if (!hasDual && !hasSingle) return null;
         if (spec.xEnd.getTime() <= spec.xStart.getTime()) return null;
 
-        const topY = margin.top + i * ridgeStep;
+        const topY = margin.top + i * (isMobile ? ridgePitch : ridgeStep);
         const xScale = scaleUtc<number>({
           domain: [spec.xStart, spec.xEnd],
           range: [0, innerWidth],
@@ -278,19 +303,22 @@ function LuxReadingsRidgelineChartInner({
 
         const y0 = yScale(0);
         const isLast = i === n - 1;
+        const showAxisOnStrip = isMobile || isLast;
 
         return (
           <Group key={`${spec.label}-${i}`} top={topY} left={margin.left}>
-            <text
-              x={-margin.left + 4}
-              y={bandInnerH / 2}
-              fill="var(--chart-tick)"
-              fontSize={10}
-              fontFamily="var(--font-sans), ui-monospace, monospace"
-              dominantBaseline="middle"
-            >
-              {spec.label}
-            </text>
+            {!isMobile ? (
+              <text
+                x={-margin.left + 4}
+                y={bandInnerH / 2}
+                fill="var(--chart-tick)"
+                fontSize={10}
+                fontFamily="var(--font-sans), ui-monospace, monospace"
+                dominantBaseline="middle"
+              >
+                {spec.label}
+              </text>
+            ) : null}
 
             {hasDual && spec.ridgeDual ? (
               <>
@@ -362,10 +390,11 @@ function LuxReadingsRidgelineChartInner({
               </>
             ) : null}
 
-            {isLast ? (
+            {showAxisOnStrip ? (
               <AxisBottom
                 top={bandInnerH}
                 scale={xScale}
+                hideAxisLine
                 hideTicks
                 tickValues={ridgelineAxisNoonInstants(
                   spec.domainStartIso,
@@ -378,6 +407,19 @@ function LuxReadingsRidgelineChartInner({
                 stroke="var(--chart-axis)"
                 tickComponent={ridgelineTickLabel}
               />
+            ) : null}
+            {isMobile ? (
+              <text
+                x={innerWidth / 2}
+                y={bandInnerH + 40}
+                fill="var(--chart-tick)"
+                fontSize={10}
+                fontFamily="var(--font-sans), ui-monospace, monospace"
+                textAnchor="middle"
+                dominantBaseline="hanging"
+              >
+                {spec.label}
+              </text>
             ) : null}
           </Group>
         );
