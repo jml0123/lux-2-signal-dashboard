@@ -22,7 +22,7 @@ export function ReadingsScopeSelector({
 
   const go = (scope: ReadingsScopeTab) => {
     if (scope === "multi") {
-      router.replace(buildMultidayQueryPath(sensor));
+      router.replace(buildMultidayQueryPath(sensor, undefined, anchorDate));
       return;
     }
     router.replace(buildReadingsQueryPath(anchorDate, sensor));

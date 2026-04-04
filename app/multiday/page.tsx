@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { ReadingsDashboardHeader } from "@/app/components/readings/ReadingsDashboardHeader";
 import { ReadingsMultiDayDashboard } from "@/app/components/readings/ReadingsMultiDayDashboard";
+import { clampReadingsDateParam } from "@/app/lib/readings/dateUtils";
 import {
   multiWindowLatestUtcDate,
   resolveMdWinParam,
@@ -24,6 +25,8 @@ export default async function MultidayPage({
   const sp = (await searchParams) ?? {};
   const endWeekRaw = firstParam(sp.endWeek);
   const sensor = firstParam(sp.sensor);
+  const dateRaw = firstParam(sp.date);
+  const dayReturn = dateRaw.trim() ? clampReadingsDateParam(dateRaw) : null;
   const latestUtc = multiWindowLatestUtcDate();
   const resolved = resolveMdWinParam(
     endWeekRaw || undefined,
@@ -34,7 +37,7 @@ export default async function MultidayPage({
   if (resolved) {
     const normalized = endWeekRaw.trim();
     if (!normalized || normalized !== resolved) {
-      redirect(buildMultidayQueryPath(sensor, resolved));
+      redirect(buildMultidayQueryPath(sensor, resolved, dayReturn ?? undefined));
     }
   }
 
@@ -45,6 +48,7 @@ export default async function MultidayPage({
         <ReadingsMultiDayDashboard
           endWeek={resolved}
           sensor={sensor}
+          dayReturn={dayReturn}
           observerTimezone={getObserverTimezone()}
         />
       </div>
