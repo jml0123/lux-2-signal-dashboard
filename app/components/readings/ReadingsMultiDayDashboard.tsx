@@ -159,7 +159,8 @@ export function ReadingsMultiDayDashboard({
           label,
           rows: concatRowsForDates(byDay, chunkDates),
           domainStartDate: oldest,
-          domainDaySpan: chunkDates.length,
+          /** Full strip width (7 days); partial weeks show empty tail with correct weekday ticks. */
+          domainDaySpan: MULTI_STRIP_DAYS,
         };
       })
       .filter((row): row is RidgelineChunkSpec => row != null);
@@ -184,11 +185,11 @@ export function ReadingsMultiDayDashboard({
         {loadError ? (
           <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
         ) : null}
-        <div className="relative z-0 flex flex-col gap-3 px-1 pt-4 pb-0 sm:px-2">
+        <div className="relative z-0 flex w-full min-w-0 flex-col gap-3 px-1 pt-4 max-sm:mb-32 sm:mb-24 sm:px-2">
           <LuxReadingsRidgelineChart
             chunks={ridgelineChunks}
             observerTimezone={observerTimezone}
-            className="min-h-[300px] w-full"
+            className="min-h-[300px] w-full max-sm:px-1"
             emptyMessage={
               !endWeek
                 ? "No week window in range yet."
@@ -200,14 +201,12 @@ export function ReadingsMultiDayDashboard({
             }
           />
         </div>
-        <div className="relative z-10 -mt-6 flex justify-center px-1 sm:px-2">
-          <div className="flex flex-col items-center gap-2">
-            <ReadingsMultiWeekForm
-              currentEndWeek={endWeek}
-              sensor={sensor}
-              dayReturn={dayReturn}
-            />
-          </div>
+        <div className="relative z-10 flex shrink-0 flex-col items-center px-1 sm:px-2">
+          <ReadingsMultiWeekForm
+            currentEndWeek={endWeek}
+            sensor={sensor}
+            dayReturn={dayReturn}
+          />
         </div>
       </div>
     </>

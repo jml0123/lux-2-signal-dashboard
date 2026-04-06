@@ -75,7 +75,9 @@ export type RidgelineChunkSpec = {
   rows: ReadingBucketedDatesRow[];
   /** First UTC calendar day of the strip; x-axis spans `domainDaySpan` days from here. */
   domainStartDate: string;
-  /** Number of UTC days on the x-axis for this strip (usually `stripDays`, shorter on the last chunk). */
+  /**
+   * UTC days on the x-axis (usually 7). May exceed how many days have `rows`; the rest of the strip is blank.
+   */
   domainDaySpan: number;
 };
 
