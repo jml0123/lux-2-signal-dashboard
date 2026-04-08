@@ -28,6 +28,8 @@ const MARGIN_DESKTOP = { top: 10, right: 10, bottom: 36, left: 124 };
 const MARGIN_MOBILE = { top: 10, right: 12, bottom: 12, left: 12 };
 /** Space below each ridge for weekday ticks + centered week label (mobile). */
 const MOBILE_RIDGE_FOOTER = 45;
+/** Extra vertical space between one mobile strip (ridge + footer) and the next. */
+const MOBILE_RIDGE_STRIP_GAP = 8.88;
 /** Tailwind `sm` breakpoint — keep in sync with `max-sm` usage. */
 const MOBILE_MAX_WIDTH_PX = 639;
 
@@ -47,6 +49,8 @@ function useIsRidgelineMobileLayout(): boolean {
 }
 /** Drawable lux height per ridge (px). */
 const bandInnerH = 78;
+/** Left / under-strip week labels (single color). */
+const RIDGELINE_STRIP_LABEL_FONT_PX = 8.88;
 /** Vertical offset between strip baselines; larger ⇒ more space between weeks (less overlap). */
 const ridgeStep = 84;
 /** SE / NW outlines: tint toward page bg so ridges stay readable but not harsh. */
@@ -136,7 +140,9 @@ function LuxReadingsRidgelineChartInner({
   const margin = isMobile ? MARGIN_MOBILE : MARGIN_DESKTOP;
   const innerWidth = Math.max(0, width - margin.left - margin.right);
   const n = chunks.length;
-  const ridgePitch = isMobile ? bandInnerH + MOBILE_RIDGE_FOOTER : ridgeStep;
+  const ridgePitch = isMobile
+    ? bandInnerH + MOBILE_RIDGE_FOOTER + MOBILE_RIDGE_STRIP_GAP
+    : ridgeStep;
   const svgHeight = isMobile
     ? margin.top + (n > 0 ? n * ridgePitch : 0) + margin.bottom
     : margin.top + (n > 0 ? (n - 1) * ridgeStep + bandInnerH : 0) + margin.bottom;
@@ -314,7 +320,7 @@ function LuxReadingsRidgelineChartInner({
                 x={-margin.left + 4}
                 y={bandInnerH / 2}
                 fill="var(--chart-tick)"
-                fontSize={10}
+                fontSize={RIDGELINE_STRIP_LABEL_FONT_PX}
                 fontFamily="var(--font-sans), ui-monospace, monospace"
                 dominantBaseline="middle"
               >
@@ -415,7 +421,7 @@ function LuxReadingsRidgelineChartInner({
                 x={innerWidth / 2}
                 y={bandInnerH + 40}
                 fill="var(--chart-tick)"
-                fontSize={10}
+                fontSize={RIDGELINE_STRIP_LABEL_FONT_PX}
                 fontFamily="var(--font-sans), ui-monospace, monospace"
                 textAnchor="middle"
                 dominantBaseline="hanging"

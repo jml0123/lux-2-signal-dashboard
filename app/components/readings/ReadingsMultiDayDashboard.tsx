@@ -13,7 +13,7 @@ import {
   MULTI_STRIP_DAYS,
   multiWindowDatesForMdWinClamped,
   multiWindowLatestUtcDate,
-  ridgelineStripLabelForChunk,
+  ridgelineStripLabelsForChunks,
 } from "@/app/lib/readings/multiWeekWindow";
 import { READINGS_DATA_EPOCH_DATE } from "@/app/lib/readings/readings.constants";
 import { ReadingsMultiWeekForm } from "@/app/components/readings/ReadingsMultiWeekForm";
@@ -69,6 +69,11 @@ export function ReadingsMultiDayDashboard({
   const dateChunks = useMemo(
     () => chunkDateList(datesNeeded, MULTI_STRIP_DAYS),
     [datesNeeded],
+  );
+
+  const ridgelineStripLabels = useMemo(
+    () => ridgelineStripLabelsForChunks(dateChunks),
+    [dateChunks],
   );
 
   useEffect(() => {
@@ -151,10 +156,10 @@ export function ReadingsMultiDayDashboard({
 
   const ridgelineChunks: RidgelineChunkSpec[] = useMemo(() => {
     return dateChunks
-      .map((chunkDates) => {
+      .map((chunkDates, i) => {
         if (chunkDates.length === 0) return null;
         const oldest = chunkDates[0] ?? "";
-        const label = ridgelineStripLabelForChunk(chunkDates);
+        const label = ridgelineStripLabels[i] ?? "";
         return {
           label,
           rows: concatRowsForDates(byDay, chunkDates),
@@ -164,7 +169,7 @@ export function ReadingsMultiDayDashboard({
         };
       })
       .filter((row): row is RidgelineChunkSpec => row != null);
-  }, [byDay, dateChunks]);
+  }, [byDay, dateChunks, ridgelineStripLabels]);
 
   return (
     <>

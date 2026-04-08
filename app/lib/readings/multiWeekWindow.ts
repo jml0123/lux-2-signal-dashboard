@@ -203,25 +203,44 @@ export function mdWinDisplayLabel(token: string): string {
   return formatMonthYearWeekLabel(p.y, p.m, p.w);
 }
 
+export type MdWinDisplayParts = { monthYear: string; weekPart: string };
+
+/** Month + year and week phrase for masthead-style two-tone labels (closed trigger only). */
+export function mdWinDisplayParts(token: string): MdWinDisplayParts | null {
+  const p = parseMdWin(token);
+  if (!p) return null;
+  const mon = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(p.y, p.m - 1, 1)));
+  return {
+    monthYear: `${mon} ${p.y}`,
+    weekPart: `Week ${p.w}`,
+  };
+}
+
 function parseYmd(iso: string): Ymd | null {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return null;
   return { y, m, d };
 }
 
+type RidgelineStripDraft =
+  | { mode: "week"; y: number; m: number; w: 1 | 2 | 3 | 4 }
+  | { mode: "span"; p0: Ymd; p1: Ymd };
+
 /**
- * Left ridgeline label for one 7-day strip. Straddles use the **later** month and the week of that
- * month’s first day in the strip (e.g. Mar 29–Apr 4 → Apr …, Week 1). Same-month chunks with only
- * days 29+ use a date span so they don’t repeat “Week 4” after Mar 22–28.
+ * Straddles use the **later** month and the week of that month’s first day in the strip (e.g.
+ * Mar 29–Apr 4 → Apr, week 1). Same-month chunks with any day 29+ use a span draft (no week key).
  */
-export function ridgelineStripLabelForChunk(datesIso: string[]): string {
-  if (datesIso.length === 0) return "";
+function ridgelineStripDraftForChunk(datesIso: string[]): RidgelineStripDraft | null {
+  if (datesIso.length === 0) return null;
   const parts: Ymd[] = [];
   for (const iso of datesIso) {
     const p = parseYmd(iso);
     if (p) parts.push(p);
   }
-  if (parts.length === 0) return "";
+  if (parts.length === 0) return null;
 
   const p0 = parts[0]!;
   const p1 = parts[parts.length - 1]!;
@@ -232,22 +251,87 @@ export function ridgelineStripLabelForChunk(datesIso: string[]): string {
   if (straddles) {
     const lateYm = ymKey(p1);
     const firstInLateMonth = parts.find((p) => ymKey(p) === lateYm)!;
-    return formatMonthYearWeekLabel(
-      firstInLateMonth.y,
-      firstInLateMonth.m,
-      weekInMonthFromDay(firstInLateMonth.d),
-    );
+    return {
+      mode: "week",
+      y: firstInLateMonth.y,
+      m: firstInLateMonth.m,
+      w: weekInMonthFromDay(firstInLateMonth.d),
+    };
   }
 
   if (hasMonthTailDay) {
-    return formatUtcDaySpanLabel(p0, p1);
+    return { mode: "span", p0, p1 };
   }
 
-  return formatMonthYearWeekLabel(
-    p0.y,
-    p0.m,
-    weekInMonthFromDay(p0.d),
-  );
+  return {
+    mode: "week",
+    y: p0.y,
+    m: p0.m,
+    w: weekInMonthFromDay(p0.d),
+  };
+}
+
+/** Next week within 1–4 / month; week 4 → following month week 1 (year rolls Dec → Jan). */
+function bumpMonthWeek(
+  y: number,
+  m: number,
+  w: 1 | 2 | 3 | 4,
+): { y: number; m: number; w: 1 | 2 | 3 | 4 } {
+  if (w < 4) return { y, m, w: (w + 1) as 1 | 2 | 3 | 4 };
+  let nm = m + 1;
+  let ny = y;
+  if (nm > 12) {
+    nm = 1;
+    ny++;
+  }
+  return { y: ny, m: nm, w: 1 };
+}
+
+function sameMonthWeek(
+  a: { y: number; m: number; w: number },
+  b: { y: number; m: number; w: number },
+): boolean {
+  return a.y === b.y && a.m === b.m && a.w === b.w;
+}
+
+/**
+ * Labels for ridgeline strips (oldest chunk first). Week labels match per-strip rules, then a pass
+ * ensures no two **consecutive** strips share the same month/week (bump week, rolling w4 → next
+ * month w1).
+ */
+export function ridgelineStripLabelsForChunks(chunks: string[][]): string[] {
+  const drafts = chunks.map((c) => ridgelineStripDraftForChunk(c));
+  const out: string[] = [];
+  let prevWeek: { y: number; m: number; w: number } | null = null;
+
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
+    if (!draft) {
+      out.push("");
+      prevWeek = null;
+      continue;
+    }
+
+    if (draft.mode === "span") {
+      out.push(formatUtcDaySpanLabel(draft.p0, draft.p1));
+      prevWeek = null;
+      continue;
+    }
+
+    let { y, m, w } = draft;
+    while (prevWeek !== null && sameMonthWeek(prevWeek, { y, m, w })) {
+      ({ y, m, w } = bumpMonthWeek(y, m, w));
+    }
+    out.push(formatMonthYearWeekLabel(y, m, w));
+    prevWeek = { y, m, w };
+  }
+
+  return out;
+}
+
+/** Single-strip helper; for collision-aware labels use `ridgelineStripLabelsForChunks`. */
+export function ridgelineStripLabelForChunk(datesIso: string[]): string {
+  return ridgelineStripLabelsForChunks([datesIso])[0] ?? "";
 }
 
 /**

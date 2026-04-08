@@ -15,6 +15,7 @@ import { ReadingsControlChevronIcon } from "@/app/components/readings/ReadingsCo
 import {
   listEligibleMdWins,
   mdWinDisplayLabel,
+  mdWinDisplayParts,
   multiWindowLatestUtcDate,
 } from "@/app/lib/readings/multiWeekWindow";
 import { READINGS_DATA_EPOCH_DATE } from "@/app/lib/readings/readings.constants";
@@ -123,6 +124,10 @@ export function ReadingsMultiWeekForm({
     );
   }
 
+  const triggerParts = effectiveEndWeek
+    ? mdWinDisplayParts(effectiveEndWeek)
+    : null;
+
   return (
     <div ref={rootRef} className="relative inline-flex flex-col items-center">
       <h2 className="lux-masthead-datetime m-0 text-sm leading-tight">
@@ -139,11 +144,33 @@ export function ReadingsMultiWeekForm({
         >
           <span
             id={`${triggerId}-label`}
-            className="inline-flex items-center gap-0.5 font-semibold tracking-tight underline decoration-transparent underline-offset-2 transition-colors group-hover:decoration-current"
-            style={{ color: "var(--chart-title-date)" }}
+            className="inline-flex flex-wrap items-center justify-center gap-x-2"
           >
-            {effectiveEndWeek ? mdWinDisplayLabel(effectiveEndWeek) : "Week window"}
-            <ReadingsControlChevronIcon className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70" />
+            {!triggerParts ? (
+              <span
+                className="inline-flex items-center gap-0.5 font-semibold tracking-tight underline decoration-transparent underline-offset-2 transition-colors group-hover:decoration-current"
+                style={{ color: "var(--chart-title-date)" }}
+              >
+                Week window
+                <ReadingsControlChevronIcon className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70" />
+              </span>
+            ) : (
+              <>
+                <span
+                  className="inline-flex items-center gap-0.5 font-semibold tracking-tight underline decoration-transparent underline-offset-2 transition-colors group-hover:decoration-current"
+                  style={{ color: "var(--chart-title-date)" }}
+                >
+                  {triggerParts.monthYear}
+                  <ReadingsControlChevronIcon className="shrink-0 opacity-45 transition-opacity group-hover:opacity-70" />
+                </span>
+                <span
+                  className="font-bold tracking-tight"
+                  style={{ color: "var(--chart-title-weekday)" }}
+                >
+                  {triggerParts.weekPart}
+                </span>
+              </>
+            )}
           </span>
         </button>
       </h2>
@@ -153,11 +180,10 @@ export function ReadingsMultiWeekForm({
           id={menuId}
           role="menu"
           aria-labelledby={`${triggerId}-label`}
-          className="absolute bottom-full left-1/2 z-40 mb-2 min-w-[min(100vw-2rem,16rem)] max-h-[min(70vh,20rem)] -translate-x-1/2 overflow-y-auto rounded-md py-1 shadow-md"
+          className="lux-date-picker absolute bottom-full left-1/2 z-40 mb-2 min-w-[min(100vw-2rem,16rem)] max-h-[min(70vh,20rem)] -translate-x-1/2 overflow-y-auto rounded-md border py-1 shadow-sm"
           style={{
             background: "var(--app-card-surface)",
-            boxShadow:
-              "0 8px 28px color-mix(in srgb, var(--app-text) 12%, transparent)",
+            borderColor: "var(--app-card-border)",
           }}
         >
           {options.map((tok, index) => {
