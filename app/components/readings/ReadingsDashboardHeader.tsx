@@ -29,7 +29,7 @@ export function ReadingsDashboardHeader() {
             fontFamily: "var(--font-archivo), serif",
           }}
         >
-          📝 Docs
+          🎼📝 Music & Docs
         </a>
       </div>
     </header>
