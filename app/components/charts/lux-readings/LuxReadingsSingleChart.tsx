@@ -85,9 +85,19 @@ function LuxReadingsSingleChartInner({
   dual,
   yDomain = defaultYDomain,
   sunMarkers = null,
+  observerTimezone,
   onAmbientScrubTime,
   emptyPlotMessage = null,
 }: LuxReadingsSingleChartInnerProps) {
+  const fmtXTick = useCallback(
+    (v: Date | number) => formatXTick(v, observerTimezone),
+    [observerTimezone],
+  );
+  const fmtTimeLabel = useCallback(
+    (iso: string) => formatTimeLabel(iso, observerTimezone),
+    [observerTimezone],
+  );
+
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = plotHeight - margin.top - margin.bottom;
   const brushInnerWidth = Math.max(
@@ -244,16 +254,16 @@ function LuxReadingsSingleChartInner({
   const edgeTimeLabels = useMemo(() => {
     if (isZoomed) {
       return {
-        left: formatXTick(zoomDomain[0]),
-        right: formatXTick(zoomDomain[1]),
+        left: fmtXTick(zoomDomain[0]),
+        right: fmtXTick(zoomDomain[1]),
       };
     }
 
     const dawn = sunMarkers?.civilDawn ? new Date(sunMarkers.civilDawn) : dayStart;
     const dusk = sunMarkers?.civilDusk ? new Date(sunMarkers.civilDusk) : dayEnd;
     return {
-      left: `₊☀︎✧ Dawn ${formatXTick(dawn)}`,
-      right: `⋆☼. Dusk ${formatXTick(dusk)}`,
+      left: `₊☀︎✧ Dawn ${fmtXTick(dawn)} (ET)`,
+      right: `⋆☼. Dusk ${fmtXTick(dusk)} (ET)`,
     };
   }, [isZoomed, zoomDomain, sunMarkers, dayStart, dayEnd]);
 
@@ -377,7 +387,7 @@ function LuxReadingsSingleChartInner({
     () =>
       brushSunLayout.map(({ kind, label, t, x }) => (
         <g key={kind} style={{ pointerEvents: "none" }} aria-hidden="true">
-          <title>{`${label} — ${formatXTick(t)}`}</title>
+          <title>{`${label} — ${fmtXTick(t)}`}</title>
           <line
             x1={x}
             x2={x}
@@ -563,7 +573,7 @@ function LuxReadingsSingleChartInner({
             layouts={mainSunLayout}
             glyphTop={LUX_SUN_GLYPH_TOP}
             hitRadius={LUX_SUN_GLYPH_HIT_R}
-            formatTime={formatXTick}
+            formatTime={fmtXTick}
             onSunPointerEnter={onSunPointerEnter}
             onSunPointerLeave={hideTooltip}
           />
@@ -728,7 +738,7 @@ function LuxReadingsSingleChartInner({
         >
           <LuxReadingsChartTooltipContent
             data={tooltipData}
-            formatTimeLabel={formatTimeLabel}
+            formatTimeLabel={fmtTimeLabel}
           />
         </Tooltip>
       )}
@@ -748,6 +758,7 @@ export function LuxReadingsSingleChart({
   sunMarkers = null,
   yDomain,
   className,
+  observerTimezone,
   onAmbientScrubTime,
   emptyPlotMessage = null,
 }: LuxReadingsSingleChartProps) {
@@ -767,6 +778,7 @@ export function LuxReadingsSingleChart({
               dual={dual}
               yDomain={yDomain}
               sunMarkers={sunMarkers}
+              observerTimezone={observerTimezone}
               onAmbientScrubTime={onAmbientScrubTime}
               emptyPlotMessage={emptyPlotMessage}
             />

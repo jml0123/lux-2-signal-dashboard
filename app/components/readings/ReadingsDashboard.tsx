@@ -193,6 +193,7 @@ export function ReadingsDashboard({
           points={points}
           dual={dual}
           sunMarkers={sunMarkers}
+          observerTimezone={observerTimezone}
           onAmbientScrubTime={onAmbientScrubTime}
           emptyPlotMessage={
             !loading && pointCount === 0

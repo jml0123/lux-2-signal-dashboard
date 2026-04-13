@@ -1,17 +1,19 @@
 import type { LuxChartPoint, LuxDualPoint } from "@/app/lib/readings/readings.types";
 
-export function formatXTick(v: Date | number) {
+export function formatXTick(v: Date | number, timeZone?: string) {
   const d = v instanceof Date ? v : new Date(v);
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
     minute: "2-digit",
+    ...(timeZone ? { timeZone } : {}),
   }).format(d);
 }
 
-export function formatTimeLabel(iso: string) {
+export function formatTimeLabel(iso: string, timeZone?: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
+    ...(timeZone ? { timeZone } : {}),
   }).format(new Date(iso));
 }
 

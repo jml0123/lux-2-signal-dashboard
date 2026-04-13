@@ -37,6 +37,7 @@ export type LuxReadingsSingleChartInnerProps = {
   dual?: { sensorA: string; sensorB: string; points: LuxDualPoint[] };
   yDomain?: [number, number];
   sunMarkers?: ChartSunMarkersIso | null;
+  observerTimezone?: string;
   /** Main-plot scrub: wall time under cursor (ms); `null` when pointer leaves plot or exits inner bounds (neutral page bg). */
   onAmbientScrubTime?: (timeMs: number | null) => void;
   /** Centered over main plot (Metal); e.g. no buckets for current filters. */
@@ -55,6 +56,7 @@ export type LuxReadingsSingleChartProps = {
   sunMarkers?: ChartSunMarkersIso | null;
   yDomain?: [number, number];
   className?: string;
+  observerTimezone?: string;
   onAmbientScrubTime?: (timeMs: number | null) => void;
   /** Shown centered on plot when set (Metal). */
   emptyPlotMessage?: string | null;
