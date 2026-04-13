@@ -17,7 +17,10 @@ import {
 import { ReadingsControlChevronIcon } from "@/app/components/readings/ReadingsControlChevronIcon";
 import { ReadingsScopeSelector } from "@/app/components/readings/ReadingsScopeSelector";
 import { ReadingsSensorSelect } from "@/app/components/readings/ReadingsSensorSelect";
-import { formatChartDayTitleParts } from "@/app/lib/readings/dateUtils";
+import {
+  formatChartDayTitleParts,
+  isCompleteHistoricalReadingsDay,
+} from "@/app/lib/readings/dateUtils";
 import { buildAmbientTimeKnots } from "@/app/lib/readings/ambientLightScrub";
 import { useAnimatedAmbientScrubGradient } from "@/app/lib/readings/useAnimatedAmbientScrubGradient";
 import type { ChartSunMarkersIso } from "@/app/lib/readings/sunChartBounds";
@@ -25,6 +28,11 @@ import type {
   LuxChartPoint,
   ReadingBucketedRow,
 } from "@/app/lib/readings/readings.types";
+
+const FUTURE_DATA_MESSAGE =
+  "No data has been collected for this day yet (the sun has not yet risen yet, or it may be the future...) Check back again later!";
+const NO_DATA_MESSAGE =
+  "No data has been collected for this day. There may have been an error in the system preventing data collection, try a different day!";
 
 export type ReadingsDashboardProps = {
   chartStartIso: string;
@@ -55,6 +63,10 @@ export function ReadingsDashboard({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const isHistorical = isCompleteHistoricalReadingsDay(date, observerTimezone);
+  const emptyMessage = isHistorical
+    ? NO_DATA_MESSAGE
+    : FUTURE_DATA_MESSAGE;
   const ambientKnots = useMemo(
     () =>
       buildAmbientTimeKnots(
@@ -184,7 +196,7 @@ export function ReadingsDashboard({
           onAmbientScrubTime={onAmbientScrubTime}
           emptyPlotMessage={
             !loading && pointCount === 0
-              ? "No data has been collected for this day yet (the sun has not yet risen yet... or it may be the future). Check back again later!"
+              ? emptyMessage
               : null
           }
         />

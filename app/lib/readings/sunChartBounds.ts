@@ -102,9 +102,48 @@ export function solarNoonUtcForDateStr(dateStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
 }
 
-function spaOptionsForObserver(): { timezoneId: string } | undefined {
+/**
+ * Returns the observer's UTC offset in fractional hours at `anchorDate` (DST-aware).
+ * e.g. America/New_York in summer → -4; in winter → -5.
+ * Uses Intl so it works regardless of the Node.js process timezone.
+ */
+function ianaOffsetHours(ianaTimezone: string, anchorDate: Date): number {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: ianaTimezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(anchorDate);
+  const get = (type: string) =>
+    parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+  // hour12:false can return 24 for midnight — normalise to 0.
+  const h = get("hour") % 24;
+  const localMs = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    h,
+    get("minute"),
+    get("second"),
+  );
+  return (localMs - anchorDate.getTime()) / 3_600_000;
+}
+
+/**
+ * SPA options for the observer's timezone.
+ * Passes a numeric `timezone` offset (not `timezoneId`) because sunrise-sunset-js
+ * stores `timezoneId` but never reads it — the calculation always uses `timezone`.
+ * Computing the offset via Intl makes this correct on any server timezone (incl. UTC).
+ */
+function spaOptionsForObserver(anchorDate: Date): { timezone: number } | undefined {
   const tz = getObserverTimezone();
-  return tz ? { timezoneId: tz } : undefined;
+  if (!tz) return undefined;
+  return { timezone: ianaOffsetHours(tz, anchorDate) };
 }
 
 /** ISO times for sun events at `OBSERVER_LAT` / `OBSERVER_LNG` (SPA / NREL). */
@@ -124,11 +163,12 @@ export function getChartSunMarkersIso(
   dateStr: string,
   coords: ObserverCoords,
 ): ChartSunMarkersIso | null {
+  const anchor = solarNoonUtcForDateStr(dateStr);
   const times = getSunTimes(
     coords.lat,
     coords.lng,
-    solarNoonUtcForDateStr(dateStr),
-    spaOptionsForObserver(),
+    anchor,
+    spaOptionsForObserver(anchor),
   );
   const tw = times.twilight;
   if (
@@ -159,11 +199,12 @@ export function getDawnDuskChartBounds(
   coords: ObserverCoords,
 ): { start: Date; end: Date } {
   const [y, m, d] = dateStr.split("-").map(Number);
+  const anchor = solarNoonUtcForDateStr(dateStr);
   const times = getSunTimes(
     coords.lat,
     coords.lng,
-    solarNoonUtcForDateStr(dateStr),
-    spaOptionsForObserver(),
+    anchor,
+    spaOptionsForObserver(anchor),
   );
   const dawn = times.twilight?.civilDawn;
   const dusk = times.twilight?.civilDusk;
