@@ -173,13 +173,21 @@ export function mergeBucketedRowsByBucketSensor(
 const RIDGE_DUAL_SENSOR_SE = "dk-southeast";
 const RIDGE_DUAL_SENSOR_NW = "dk-northwest";
 
+/** Alphabetical `sensorA` / `sensorB` labels for the fixed window pair. */
+function ridgeWindowPairSorted(): [string, string] {
+  return [RIDGE_DUAL_SENSOR_NW, RIDGE_DUAL_SENSOR_SE].sort((a, b) =>
+    a.localeCompare(b),
+  ) as [string, string];
+}
+
 function normSensorKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
 /**
  * Pick the two series for dual charts: either exactly two sensors after merge, or the
- * two known window sensors when more names appear in the payload.
+ * two known window sensors when more names appear in the payload. A single ridge sensor
+ * still resolves to the full NW+SE pair so the unplugged side can plot as zero.
  */
 function resolveRidgeDualSensorPair(sensorKeys: string[]): [string, string] | null {
   const sorted = [...sensorKeys].sort((a, b) => a.localeCompare(b));
@@ -188,16 +196,25 @@ function resolveRidgeDualSensorPair(sensorKeys: string[]): [string, string] | nu
   }
   const canonSe = sorted.find((k) => normSensorKey(k) === RIDGE_DUAL_SENSOR_SE);
   const canonNw = sorted.find((k) => normSensorKey(k) === RIDGE_DUAL_SENSOR_NW);
-  if (!canonSe || !canonNw) return null;
-  return [canonSe, canonNw].sort((a, b) => a.localeCompare(b)) as [
-    string,
-    string,
-  ];
+  if (canonSe && canonNw) {
+    return [canonSe, canonNw].sort((a, b) => a.localeCompare(b)) as [
+      string,
+      string,
+    ];
+  }
+  if (sorted.length === 1) {
+    const k = normSensorKey(sorted[0]!);
+    if (k === RIDGE_DUAL_SENSOR_SE || k === RIDGE_DUAL_SENSOR_NW) {
+      return ridgeWindowPairSorted();
+    }
+  }
+  return null;
 }
 
 /**
  * When "All sensors" and exactly two logical sensors (after per-location merge),
  * build aligned points for dual-series viz. Otherwise null (use merged single series).
+ * Missing buckets on one sensor use **lux 0** so a unplugged stream still draws the other.
  */
 export function bucketedRowsToDualLuxPoints(
   rows: ReadingBucketedRow[],
@@ -211,37 +228,39 @@ export function bucketedRowsToDualLuxPoints(
 
   const [sensorA, sensorB] = pair;
 
-  const bySensor = new Map<string, LuxChartPoint[]>();
+  const luxAMs = new Map<number, number>();
+  const luxBMs = new Map<number, number>();
+  const isoByMs = new Map<number, string>();
+
   for (const r of merged) {
-    if (r.sensor !== sensorA && r.sensor !== sensorB) continue;
+    const slot =
+      normSensorKey(r.sensor) === normSensorKey(sensorA)
+        ? "A"
+        : normSensorKey(r.sensor) === normSensorKey(sensorB)
+          ? "B"
+          : null;
+    if (!slot) continue;
     const t = normalizeReadingBucketStart(r.bucket_start);
+    const ms = new Date(t).getTime();
+    if (!Number.isFinite(ms)) continue;
     const lux = Number(r.value_avg);
     if (!Number.isFinite(lux)) continue;
-    if (!bySensor.has(r.sensor)) bySensor.set(r.sensor, []);
-    bySensor.get(r.sensor)!.push({ time: t, lux });
+    const map = slot === "A" ? luxAMs : luxBMs;
+    map.set(ms, lux);
+    isoByMs.set(ms, t);
   }
 
-  const seriesA = bySensor.get(sensorA)!;
-  const bByTimeMs = new Map(
-    bySensor
-      .get(sensorB)!
-      .map((p) => [new Date(p.time).getTime(), p.lux] as const),
+  const allMs = [...new Set([...luxAMs.keys(), ...luxBMs.keys()])].sort(
+    (a, b) => a - b,
   );
 
-  const points: LuxDualPoint[] = [];
-  for (const p of seriesA) {
-    const ms = new Date(p.time).getTime();
-    if (!Number.isFinite(ms)) continue;
-    const lb = bByTimeMs.get(ms);
-    if (lb === undefined || !Number.isFinite(lb)) continue;
-    points.push({
-      time: p.time,
-      luxA: p.lux,
-      luxB: lb,
-      sensorA,
-      sensorB,
-    });
-  }
+  const points: LuxDualPoint[] = allMs.map((ms) => ({
+    time: isoByMs.get(ms) ?? new Date(ms).toISOString(),
+    luxA: luxAMs.get(ms) ?? 0,
+    luxB: luxBMs.get(ms) ?? 0,
+    sensorA,
+    sensorB,
+  }));
 
   if (points.length < 2) return null;
   return { sensorA, sensorB, points };

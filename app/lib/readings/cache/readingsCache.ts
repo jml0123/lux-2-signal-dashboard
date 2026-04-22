@@ -47,6 +47,10 @@ export function readReadingsFromCache(
   if (typeof window === "undefined") return null;
   const payload = parsePayload(localStorage.getItem(key));
   if (!payload) return null;
+  if (payload.rows.length === 0) {
+    localStorage.removeItem(key);
+    return null;
+  }
   const immutable = isCompleteHistoricalReadingsDay(chartDate, observerTimezone);
   if (!immutable && Date.now() - payload.fetchedAt > TTL_MS) {
     localStorage.removeItem(key);
@@ -60,6 +64,7 @@ export function writeReadingsToCache(
   rows: ReadingBucketedRow[],
 ): void {
   if (typeof window === "undefined") return;
+  if (rows.length === 0) return;
   const payload: CachedPayload = { rows, fetchedAt: Date.now() };
   localStorage.setItem(key, JSON.stringify(payload));
 }
